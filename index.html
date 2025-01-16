@@ -122,6 +122,39 @@
             object-position: center;
         }
     </style>
+    <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
+    <script type="module">
+        import { PoolAgent } from './js/pool-agent.js';
+
+        // Initialize the agent when the page loads
+        window.addEventListener('DOMContentLoaded', async () => {
+            const agent = new PoolAgent();
+            try {
+                const pools = await agent.findProfitablePools();
+                console.log('Found profitable pools:', pools);
+                
+                // Update the UI with the results
+                const poolResultsElement = document.getElementById('pool-results');
+                if (poolResultsElement && pools.length > 0) {
+                    poolResultsElement.innerHTML = `
+                        <div class="bg-[#243038] rounded-xl p-4 mt-4">
+                            <h4 class="text-[#0a88cf] font-semibold mb-2">Top Pools Found:</h4>
+                            <ul class="space-y-2">
+                                ${pools.slice(0, 5).map(pool => `
+                                    <li class="text-white">
+                                        Pool: ${pool.address.slice(0, 8)}...
+                                        Amount: ${pool.data.tokenAmountA}
+                                    </li>
+                                `).join('')}
+                            </ul>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        });
+    </script>
 </head>
 <body class="bg-gradient-to-b from-[#192125] to-[#243038] min-h-screen">
     <!-- Modern floating navigation -->
@@ -129,6 +162,7 @@
         <div class="flex space-x-6 text-sm font-medium">
             <a href="#what-is" class="text-white hover:text-opacity-80 transition">About</a>
             <a href="#chart" class="text-white hover:text-opacity-80 transition">Chart</a>
+            <a href="#agent" class="text-white hover:text-opacity-80 transition">Agent</a>
             <a href="#how-to-buy" class="text-white hover:text-opacity-80 transition">Buy</a>
             <a href="https://holders.richbychristmas.com/" class="text-white hover:text-opacity-80 transition">Holders</a>
         </div>
@@ -212,6 +246,43 @@
             </div>
         </section>
         
+        <!-- Add this section after the tokenomics section -->
+        <section id="agent" class="scroll-mt-20">
+            <div class="bg-[#192125] rounded-3xl p-8 shadow-xl text-white">
+                <h2 class="text-4xl font-bold text-[#0a88cf] mb-8">Tidal Pool Agent</h2>
+                <div class="grid md:grid-cols-2 gap-8 items-center">
+                    <div class="space-y-6">
+                        <p class="text-lg leading-relaxed">
+                            This Agent identifies the most profitable Solana Liquidity Pools on Raydium.
+                        </p>
+                        <div class="bg-[#243038] rounded-xl p-6">
+                            <div id="pool-results">
+                                <!-- Results will be populated here -->
+                                <p class="text-white">Loading pools...</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-[#243038] rounded-2xl p-6 space-y-4">
+                        <h3 class="text-2xl font-semibold text-[#0a88cf]">Key Features</h3>
+                        <ul class="space-y-3 text-lg">
+                            <li class="flex items-start">
+                                <span class="text-[#0a88cf] mr-2">•</span>
+                                <span>Real-time pool analysis</span>
+                            </li>
+                            <li class="flex items-start">
+                                <span class="text-[#0a88cf] mr-2">•</span>
+                                <span>Automatic liquidity detection</span>
+                            </li>
+                            <li class="flex items-start">
+                                <span class="text-[#0a88cf] mr-2">•</span>
+                                <span>Profit optimization algorithms</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
         <!-- Chart Section -->
         <section id="chart" class="scroll-mt-20">
             <div class="bg-[#192125] rounded-3xl p-8 shadow-xl text-white">
@@ -285,10 +356,6 @@
         <div class="scroll-container">
             <div class="scrolling-wrapper">
                 <div class="scrolling-text">
-                    <span class="tp-text">$TP</span>
-                    <span class="tp-text"><span class="emoji">🌊</span></span>
-                    <span class="tp-text">TIDAL POOL</span>
-                    <span class="tp-text"><span class="emoji">🌊</span></span>
                     <span class="tp-text">$TP</span>
                     <span class="tp-text"><span class="emoji">🌊</span></span>
                     <span class="tp-text">TIDAL POOL</span>

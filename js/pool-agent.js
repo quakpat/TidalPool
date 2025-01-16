@@ -11,20 +11,16 @@ export class PoolAgent {
                 {
                     filters: [
                         {
-                            memcmp: {
-                                offset: 0,
-                                bytes: "3"
-                            }
-                        },
-                        {
-                            dataSize: 752
+                            dataSize: 752,
                         }
                     ],
-                    encoding: "base64"
+                    encoding: "base64",
+                    commitment: "confirmed"
                 }
             );
 
-            console.log('Processing pool data...');
+            console.log(`Found ${pools.length} raw pools`);
+
             const poolData = pools.map((pool) => {
                 return {
                     address: pool.pubkey.toBase58(),
@@ -36,7 +32,7 @@ export class PoolAgent {
                 return b.data.length - a.data.length;
             });
 
-            console.log(`Found ${sortedPools.length} pools`);
+            console.log(`Processed ${sortedPools.length} pools`);
             return sortedPools;
 
         } catch (error) {

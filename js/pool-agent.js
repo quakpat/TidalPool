@@ -1,6 +1,6 @@
 export class PoolAgent {
     constructor() {
-        this.connection = new solanaWeb3.Connection('https://rpc.helius.xyz/?api-key=YOUR_API_KEY');
+        this.connection = new solanaWeb3.Connection('https://rpc.helius.xyz/?api-key=b7b6ec9a-e258-4f73-ba77-429f2e0885f5');
     }
 
     async findProfitablePools() {

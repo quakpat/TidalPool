@@ -11,27 +11,37 @@ export class PoolAgent {
                 {
                     filters: [
                         {
-                            dataSize: 752,
+                            memcmp: {
+                                offset: 0,
+                                bytes: "3"
+                            }
                         },
+                        {
+                            dataSize: 752
+                        }
                     ],
+                    encoding: "base64"
                 }
             );
 
             console.log('Processing pool data...');
             const poolData = pools.map((pool) => {
-                const { data } = pool.account;
                 return {
-                    address: pool.pubkey,
-                    data: data
+                    address: pool.pubkey.toBase58(),
+                    data: pool.account.data
                 };
             });
 
-            return poolData.sort((a, b) => {
+            const sortedPools = poolData.sort((a, b) => {
                 return b.data.length - a.data.length;
             });
+
+            console.log(`Found ${sortedPools.length} pools`);
+            return sortedPools;
+
         } catch (error) {
             console.error('Error in findProfitablePools:', error);
-            throw error; // Propagate error to be handled by UI
+            throw error;
         }
     }
 } 

@@ -44,7 +44,7 @@
             bottom: 0;
             left: 0;
             right: 0;
-            width: 100vw;
+            width: 100%;
             padding: 8px 0;
             z-index: 50;
         }
@@ -53,22 +53,22 @@
             display: flex;
             width: 100%;
             position: relative;
+            overflow: hidden;
         }
 
         .scrolling-text {
             display: flex;
             white-space: nowrap;
             animation: scroll-left 30s linear infinite;
-            position: relative;
-            right: 0;
+            padding-left: 100%;
         }
 
         @keyframes scroll-left {
             0% {
-                transform: translateX(100%);
+                transform: translateX(0);
             }
             100% {
-                transform: translateX(-100%);
+                transform: translateX(-200%);
             }
         }
 
@@ -396,15 +396,7 @@
                     <span class="tp-text"><span class="emoji">🌊</span></span>
                     <span class="tp-text">$TP</span>
                     <span class="tp-text"><span class="emoji">🌊</span></span>
-                    <span class="tp-text">$TP</span>
-                    <span class="tp-text"><span class="emoji">🌊</span></span>
                     <span class="tp-text">TIDAL POOL</span>
-                    <span class="tp-text"><span class="emoji">🌊</span></span>
-                    <span class="tp-text">$TP</span>
-                    <span class="tp-text"><span class="emoji">🌊</span></span>
-                    <span class="tp-text">TIDAL POOL</span>
-                    <span class="tp-text"><span class="emoji">🌊</span></span>
-                    <span class="tp-text">$TP</span>
                     <span class="tp-text"><span class="emoji">🌊</span></span>
                     <span class="tp-text">$TP</span>
                     <span class="tp-text"><span class="emoji">🌊</span></span>
@@ -416,27 +408,8 @@
                     <span class="tp-text"><span class="emoji">🌊</span></span>
                     <span class="tp-text">$TP</span>
                     <span class="tp-text"><span class="emoji">🌊</span></span>
-                    <span class="tp-text">$TP</span>
-                    <span class="tp-text"><span class="emoji">🌊</span></span>
                     <span class="tp-text">TIDAL POOL</span>
                     <span class="tp-text"><span class="emoji">🌊</span></span>
-                    <span class="tp-text">$TP</span>
-                    <span class="tp-text"><span class="emoji">🌊</span></span>
-                    <span class="tp-text">TIDAL POOL</span>
-                    <span class="tp-text"><span class="emoji">🌊</span></span>
-                    <span class="tp-text">$TP</span>
-                    <span class="tp-text"><span class="emoji">🌊</span></span>
-                    <span class="tp-text">$TP</span>
-                    <span class="tp-text"><span class="emoji">🌊</span></span>
-                    <span class="tp-text">TIDAL POOL</span>
-                    <span class="tp-text"><span class="emoji">🌊</span></span>
-                    <span class="tp-text">$TP</span>
-                    <span class="tp-text"><span class="emoji">🌊</span></span>
-                    <span class="tp-text">TIDAL POOL</span>
-                    <span class="tp-text"><span class="emoji">🌊</span></span>
-                    <span class="tp-text">$TP</span>
-                    <span class="tp-text"><span class="emoji">🌊</span></span>
-
                 </div>
             </div>
         </div>

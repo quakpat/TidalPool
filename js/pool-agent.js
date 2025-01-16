@@ -1,14 +1,12 @@
-import { Connection, PublicKey } from '@solana/web3.js';
-
 export class PoolAgent {
     constructor() {
-        this.connection = new Connection('https://api.mainnet-beta.solana.com');
+        this.connection = new solanaWeb3.Connection('https://api.mainnet-beta.solana.com');
     }
 
     async findProfitablePools() {
         try {
             const pools = await this.connection.getProgramAccounts(
-                new PublicKey("675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8"),
+                new solanaWeb3.PublicKey("675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8"),
                 {
                     filters: [
                         {
@@ -22,12 +20,12 @@ export class PoolAgent {
                 const { data } = pool.account;
                 return {
                     address: pool.pubkey,
-                    data: POOL_LAYOUT.decode(data),
+                    data: data // Temporarily remove POOL_LAYOUT.decode since we don't have buffer-layout
                 };
             });
 
             return poolData.sort((a, b) => {
-                return b.data.tokenAmountA - a.data.tokenAmountA;
+                return b.data.length - a.data.length; // Temporary sort by data length
             });
         } catch (error) {
             console.error('Error:', error);

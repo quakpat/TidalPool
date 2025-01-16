@@ -142,8 +142,8 @@
                             <ul class="space-y-2">
                                 ${pools.slice(0, 5).map(pool => `
                                     <li class="text-white">
-                                        Pool: ${pool.address.slice(0, 8)}...
-                                        Amount: ${pool.data.tokenAmountA}
+                                        Pool: ${pool.address.toString().slice(0, 8)}...
+                                        Size: ${pool.data.length} bytes
                                     </li>
                                 `).join('')}
                             </ul>
@@ -152,6 +152,11 @@
                 }
             } catch (error) {
                 console.error('Error:', error);
+                poolResultsElement.innerHTML = `
+                    <div class="bg-[#243038] rounded-xl p-4 mt-4">
+                        <p class="text-red-500">Error loading pools. Please try again later.</p>
+                    </div>
+                `;
             }
         });
     </script>

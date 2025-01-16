@@ -143,16 +143,16 @@
                     poolResultsElement.innerHTML = `
                         <div class="bg-[#243038] rounded-xl p-4 mt-4">
                             <h4 class="text-[#0a88cf] font-semibold mb-2">Top Pools Found (${pools.length} total):</h4>
-                            <ul class="space-y-4">
+                            <ul class="space-y-4 max-w-full">
                                 ${pools.slice(0, 5).map(pool => `
-                                    <li class="text-white flex items-center justify-between">
-                                        <div>
+                                    <li class="text-white flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                                        <div class="min-w-0 break-all">
                                             <div>Pool: ${pool.address}</div>
                                             <div class="text-sm text-gray-400">Size: ${pool.data.length} bytes</div>
                                         </div>
                                         <a href="https://raydium.io/liquidity/add/?ammId=${pool.address}" 
                                            target="_blank" 
-                                           class="ml-4 px-4 py-2 bg-[#0a88cf] rounded-lg hover:bg-opacity-80 transition-all text-sm">
+                                           class="whitespace-nowrap px-4 py-2 bg-[#0a88cf] rounded-lg hover:bg-opacity-80 transition-all text-sm text-center">
                                             Add Liquidity
                                         </a>
                                     </li>
@@ -273,7 +273,7 @@
         <section id="agent" class="scroll-mt-20">
             <div class="bg-[#192125] rounded-3xl p-8 shadow-xl text-white">
                 <h2 class="text-4xl font-bold text-[#0a88cf] mb-8">Tidal Pool Agent</h2>
-                <div class="grid md:grid-cols-2 gap-8 items-center">
+                <div class="grid md:grid-cols-2 gap-8 items-start">
                     <div class="space-y-6">
                         <p class="text-lg leading-relaxed">
                             This Agent identifies the most profitable Solana Liquidity Pools on Raydium.

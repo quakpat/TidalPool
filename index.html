@@ -129,7 +129,6 @@
         window.addEventListener('DOMContentLoaded', async () => {
             const poolResultsElement = document.getElementById('pool-results');
             
-            // Show loading state
             poolResultsElement.innerHTML = `
                 <div class="bg-[#243038] rounded-xl p-4 mt-4">
                     <p class="text-white">Loading pools... Please wait.</p>
@@ -139,17 +138,16 @@
             try {
                 const agent = new PoolAgent();
                 const pools = await agent.findProfitablePools();
-                console.log('Found profitable pools:', pools);
                 
-                if (pools.length > 0) {
+                if (pools && pools.length > 0) {
                     poolResultsElement.innerHTML = `
                         <div class="bg-[#243038] rounded-xl p-4 mt-4">
-                            <h4 class="text-[#0a88cf] font-semibold mb-2">Top Pools Found:</h4>
+                            <h4 class="text-[#0a88cf] font-semibold mb-2">Top Pools Found (${pools.length} total):</h4>
                             <ul class="space-y-2">
                                 ${pools.slice(0, 5).map(pool => `
                                     <li class="text-white">
-                                        Pool: ${pool.address.toString().slice(0, 8)}...
-                                        Size: ${pool.data.length} bytes
+                                        <div>Pool Address: ${pool.address}</div>
+                                        <div class="text-sm text-gray-400">Data Size: ${pool.data.length} bytes</div>
                                     </li>
                                 `).join('')}
                             </ul>
@@ -166,7 +164,8 @@
                 console.error('Error:', error);
                 poolResultsElement.innerHTML = `
                     <div class="bg-[#243038] rounded-xl p-4 mt-4">
-                        <p class="text-red-500">Error loading pools: Rate limit exceeded. Please try again later.</p>
+                        <p class="text-red-500">Error loading pools: ${error.message || 'Unknown error occurred'}</p>
+                        <p class="text-sm text-gray-400 mt-2">Please try again later.</p>
                     </div>
                 `;
             }

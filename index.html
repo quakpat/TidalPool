@@ -126,16 +126,22 @@
     <script type="module">
         import { PoolAgent } from './js/pool-agent.js';
 
-        // Initialize the agent when the page loads
         window.addEventListener('DOMContentLoaded', async () => {
-            const agent = new PoolAgent();
+            const poolResultsElement = document.getElementById('pool-results');
+            
+            // Show loading state
+            poolResultsElement.innerHTML = `
+                <div class="bg-[#243038] rounded-xl p-4 mt-4">
+                    <p class="text-white">Loading pools... Please wait.</p>
+                </div>
+            `;
+
             try {
+                const agent = new PoolAgent();
                 const pools = await agent.findProfitablePools();
                 console.log('Found profitable pools:', pools);
                 
-                // Update the UI with the results
-                const poolResultsElement = document.getElementById('pool-results');
-                if (poolResultsElement && pools.length > 0) {
+                if (pools.length > 0) {
                     poolResultsElement.innerHTML = `
                         <div class="bg-[#243038] rounded-xl p-4 mt-4">
                             <h4 class="text-[#0a88cf] font-semibold mb-2">Top Pools Found:</h4>
@@ -149,12 +155,18 @@
                             </ul>
                         </div>
                     `;
+                } else {
+                    poolResultsElement.innerHTML = `
+                        <div class="bg-[#243038] rounded-xl p-4 mt-4">
+                            <p class="text-white">No pools found at the moment.</p>
+                        </div>
+                    `;
                 }
             } catch (error) {
                 console.error('Error:', error);
                 poolResultsElement.innerHTML = `
                     <div class="bg-[#243038] rounded-xl p-4 mt-4">
-                        <p class="text-red-500">Error loading pools. Please try again later.</p>
+                        <p class="text-red-500">Error loading pools: Rate limit exceeded. Please try again later.</p>
                     </div>
                 `;
             }

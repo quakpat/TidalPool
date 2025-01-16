@@ -1,10 +1,11 @@
 export class PoolAgent {
     constructor() {
-        this.connection = new solanaWeb3.Connection('https://api.mainnet-beta.solana.com');
+        this.connection = new solanaWeb3.Connection('https://rpc.helius.xyz/?api-key=YOUR_API_KEY');
     }
 
     async findProfitablePools() {
         try {
+            console.log('Fetching pools...');
             const pools = await this.connection.getProgramAccounts(
                 new solanaWeb3.PublicKey("675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8"),
                 {
@@ -16,20 +17,21 @@ export class PoolAgent {
                 }
             );
 
+            console.log('Processing pool data...');
             const poolData = pools.map((pool) => {
                 const { data } = pool.account;
                 return {
                     address: pool.pubkey,
-                    data: data // Temporarily remove POOL_LAYOUT.decode since we don't have buffer-layout
+                    data: data
                 };
             });
 
             return poolData.sort((a, b) => {
-                return b.data.length - a.data.length; // Temporary sort by data length
+                return b.data.length - a.data.length;
             });
         } catch (error) {
-            console.error('Error:', error);
-            return [];
+            console.error('Error in findProfitablePools:', error);
+            throw error; // Propagate error to be handled by UI
         }
     }
 } 

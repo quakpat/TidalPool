@@ -43,28 +43,32 @@
             position: fixed;
             bottom: 0;
             left: 0;
-            width: 100%;
+            right: 0;
+            width: 100vw;
             padding: 8px 0;
             z-index: 50;
         }
 
         .scrolling-wrapper {
             display: flex;
-            width: fit-content;
+            width: 100%;
+            position: relative;
         }
 
         .scrolling-text {
             display: flex;
             white-space: nowrap;
             animation: scroll-left 5s linear infinite;
+            position: relative;
+            right: 0;
         }
 
         @keyframes scroll-left {
             0% {
-                transform: translateX(0);
+                transform: translateX(100%);
             }
             100% {
-                transform: translateX(-50%);
+                transform: translateX(-100%);
             }
         }
 
@@ -313,7 +317,6 @@
             </div>
         </div>
         
-
 
     <!-- Footer -->
     <footer class="bg-primary text-white py-8 mt-32 mb-16">

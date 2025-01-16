@@ -6,17 +6,25 @@ export class PoolAgent {
     async findProfitablePools() {
         try {
             console.log('Fetching pools...');
-            const pools = await this.connection.getProgramAccounts(
-                new solanaWeb3.PublicKey("675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8"),
-                {
-                    filters: [
-                        {
-                            dataSize: 752,
-                        }
-                    ],
-                    encoding: "base64",
-                    commitment: "confirmed"
+            const programId = new solanaWeb3.PublicKey("675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8");
+            
+            const config = {
+                commitment: "confirmed",
+                filters: [{
+                    memcmp: {
+                        offset: 0,
+                        bytes: "3"
+                    }
+                }],
+                dataSlice: {
+                    offset: 0,
+                    length: 100
                 }
+            };
+
+            const pools = await this.connection.getProgramAccounts(
+                programId,
+                config
             );
 
             console.log(`Found ${pools.length} raw pools`);
@@ -28,16 +36,12 @@ export class PoolAgent {
                 };
             });
 
-            const sortedPools = poolData.sort((a, b) => {
-                return b.data.length - a.data.length;
-            });
-
-            console.log(`Processed ${sortedPools.length} pools`);
-            return sortedPools;
+            console.log(`Processed ${poolData.length} pools`);
+            return poolData;
 
         } catch (error) {
             console.error('Error in findProfitablePools:', error);
-            throw error;
+            throw new Error(`Failed to fetch pools: ${error.message}`);
         }
     }
 } 

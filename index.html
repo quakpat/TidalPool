@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="$TP - TidalPool, Shaping the Future of Solana Liquidity">
+    <title>$TP - TidalPool</title>
+    
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Custom styles -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
+        :root {
+            --primary: #0a88cf;
+            --secondary: #192125;
+            --accent: #1a9aeb;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            scroll-behavior: smooth;
+        }
+
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        .gradient-text {
+            background: linear-gradient(45deg, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .scroll-container {
+            overflow: hidden;
+            background: var(--primary);
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            padding: 8px 0;
+            z-index: 50;
+        }
+
+        .scrolling-wrapper {
+            display: flex;
+            width: fit-content;
+        }
+
+        .scrolling-text {
+            display: flex;
+            white-space: nowrap;
+            animation: scroll-left 5s linear infinite;
+        }
+
+        @keyframes scroll-left {
+            0% {
+                transform: translateX(0);
+            }
+            100% {
+                transform: translateX(-50%);
+            }
+        }
+
+        .brace-text {
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+            margin: 0 12px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+        }
+
+        .brace-text span.emoji {
+            font-size: 14px;
+        }
+
+        .connect-wallet-button {
+            background: linear-gradient(45deg, var(--primary), var(--accent));
+            color: white;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        .connect-wallet-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px -1px rgba(0, 0, 0, 0.15), 0 3px 6px -1px rgba(0, 0, 0, 0.08);
+        }
+
+        .connect-wallet-button:active {
+            transform: translateY(0);
+        }
+
+        .hero {
+            position: relative;
+            height: 100vh;
+            max-height: 800px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .hero img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-b from-[#192125] to-[#243038] min-h-screen">
+    <!-- Modern floating navigation -->
+    <nav class="fixed top-4 left-1/2 transform -translate-x-1/2 glass-effect px-6 py-3 rounded-full z-50 shadow-lg">
+        <div class="flex space-x-6 text-sm font-medium">
+            <a href="#what-is" class="text-white hover:text-opacity-80 transition">About</a>
+            <a href="#vision" class="text-white hover:text-opacity-80 transition">Vision</a>
+            <a href="#chart" class="text-white hover:text-opacity-80 transition">Chart</a>
+            <a href="#how-to-buy" class="text-white hover:text-opacity-80 transition">Buy</a>
+            <a href="https://holders.richbychristmas.com/" class="text-white hover:text-opacity-80 transition">Holders</a>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="hero">
+        <div class="absolute inset-0 bg-[url('https://imgur.com/LpTt8Pw.jpg')] bg-cover bg-center"></div>
+        <div class="absolute inset-0 bg-black bg-opacity-40"></div>
+        <div class="relative z-10 text-center">
+            <h1 class="text-6xl font-bold text-[#0a88cf] mb-4">TidalPool</h1>
+            <p class="text-xl text-white/90">Shaping the Future of Solana Liquidity</p>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 py-16 space-y-32 pb-32">
+        <!-- What is Section -->
+        <section id="what-is" class="scroll-mt-20">
+            <div class="bg-[#192125] rounded-3xl p-8 shadow-xl text-white">
+                <h2 class="text-4xl font-bold text-[#0a88cf] mb-8">TidalPool: The Natural Force of Liquidity</h2>
+                <div class="grid md:grid-cols-2 gap-8 items-center">
+                    <div class="space-y-6">
+                        <div class="mb-8">
+                            <h3 class="text-2xl font-semibold text-white mb-4">Behind Our Name</h3>
+                            <p class="text-lg leading-relaxed">
+                                Throughout history, tides have shaped our world's coastlines, guided maritime navigation, and sustained complex marine ecosystems. These powerful, predictable forces move immense volumes of water across our planet's oceans with unwavering reliability.
+                            </p>
+                        </div>
+                        <div class="mb-8">
+                            <h3 class="text-2xl font-semibold text-white mb-4">Vision</h3>
+                            <p class="text-lg leading-relaxed">
+                                In the vast ocean of decentralized finance, TidalPool stands as a beacon of reliability and innovation. We've developed a sophisticated liquidity aggregation system that harnesses the natural rhythms of market movement while introducing groundbreaking deflationary mechanics. Our platform creates predictable, cyclical liquidity patterns that projects can depend on, just as coastal life depends on tidal movements.
+                            </p>
+                        </div>
+                        <div class="flex space-x-6">
+                            <a href="https://x.com/TidalPoolSolana" class="text-[#0a88cf] hover:opacity-80 transition flex items-center text-lg">
+                                <svg class="w-6 h-6 mr-2" viewBox="0 0 24 24" style="fill: var(--primary)">
+                                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                                </svg>
+                                Twitter
+                            </a>
+                            <a href="https://t.me/richbychristmas" class="text-[#0a88cf] hover:opacity-80 transition flex items-center text-lg">
+                                <svg class="w-6 h-6 mr-2" viewBox="0 0 24 24" style="fill: var(--primary)">
+                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.12.02-1.96 1.25-5.54 3.69-.52.36-1 .53-1.42.52-.47-.01-1.37-.26-2.03-.48-.82-.27-1.47-.42-1.42-.88.03-.24.35-.49.96-.75 3.78-1.65 6.31-2.74 7.58-3.27 3.61-1.51 4.36-1.77 4.85-1.78.11 0 .35.03.5.16.13.13.17.31.19.43-.01.07-.01.15-.02.19z"/>
+                                </svg>
+                                Telegram
+                            </a>
+                        </div>
+                    </div>
+                    <div class="aspect-[9/16] max-h-[600px] rounded-2xl overflow-hidden shadow-lg mx-auto">
+                        <video autoplay loop muted playsinline class="w-full h-full object-cover">
+                            <source src="https://i.imgur.com/o7btElV.mp4" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- Tokenomics Section -->
+        <section id="tokenomics" class="scroll-mt-20">
+            <div class="bg-[#192125] rounded-3xl p-8 shadow-xl text-white">
+                <h2 class="text-4xl font-bold text-[#0a88cf] mb-8">Tokenomics</h2>
+                <div class="grid grid-cols-2 md:grid-cols-2 gap-6">
+                    <div class="p-6 bg-[#243038] rounded-2xl">
+                        <p class="font-semibold text-lg text-white">Supply</p>
+                        <p class="text-2xl text-[#0a88cf]">1,000,000,000</p>
+                    </div>
+                    <div class="p-6 bg-[#243038] rounded-2xl">
+                        <p class="font-semibold text-lg text-white">Tax</p>
+                        <p class="text-2xl text-[#0a88cf]">0%</p>
+                    </div>
+                </div>
+                <div class="mt-8 p-4 bg-[#243038] rounded-xl">
+                    <a href="https://solscan.io/token/RBCDN1DniDSEAogeCgmzXCgoxKpv1nofWsmMjTTVzqd" 
+                       class="font-mono text-sm break-all text-[#0a88cf] hover:text-opacity-80 transition">
+                        Token: RBCDN1DniDSEAogeCgmzXCgoxKpv1nofWsmMjTTVzqd
+                    </a>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Chart Section -->
+        <section id="chart" class="scroll-mt-20">
+            <div class="bg-[#192125] rounded-3xl p-8 shadow-xl text-white">
+                <h2 class="text-4xl font-bold text-[#0a88cf] mb-8">$TP Chart</h2>
+                <div class="space-y-6">
+                    <div class="mt-8">
+                        <a href="https://dexscreener.com/solana/dnybxggcenoytm5zwkhsha3n29aakcfjzwo6st6imeh6" 
+                           target="_blank" 
+                           class="connect-wallet-button inline-block">
+                            View Chart on DEXScreener
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- How to Buy Section -->
+        <section id="how-to-buy" class="scroll-mt-20">
+            <div class="bg-[#192125] rounded-3xl p-8 shadow-xl text-white">
+                <h2 class="text-4xl font-bold text-[#0a88cf] mb-8">How to Buy</h2>
+                <div class="grid md:grid-cols-2 gap-8">
+                    <div class="space-y-6">
+                        <div class="space-y-4">
+                            <h3 class="text-2xl font-semibold text-white">Steps to buy:</h3>
+                            <ol class="space-y-4">
+                                <li class="flex items-center">
+                                    <span class="flex-shrink-0 w-8 h-8 rounded-full bg-[#0a88cf] flex items-center justify-center text-white font-bold mr-3">1</span>
+                                    <span class="text-white">Click the button below to swap on Orca</span>
+                                </li>
+                            </ol>
+                        </div>
+                        <div class="mt-8">
+                            <a href="https://www.orca.so/?outputCurrency=RBCDN1DniDSEAogeCgmzXCgoxKpv1nofWsmMjTTVzqd" 
+                               target="_blank" 
+                               class="connect-wallet-button inline-block">
+                                Buy on Orca
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+
+        
+        <!-- Scrolling Banner -->
+        <div class="scroll-container">
+            <div class="scrolling-wrapper">
+                <div class="scrolling-text">
+                    <span class="brace-text">$TP</span>
+                    <span class="brace-text"><span class="emoji">🌊</span></span>
+                    <span class="brace-text">TIDAL POOL</span>
+                    <span class="brace-text"><span class="emoji">🌊</span></span>
+                    <span class="brace-text">$TP</span>
+                    <span class="brace-text"><span class="emoji">🌊</span></span>
+                    <span class="brace-text">TIDAL POOL</span>
+                    <span class="brace-text"><span class="emoji">🌊</span></span>
+                </div>
+                <div class="scrolling-text">
+                    <span class="brace-text">$TP</span>
+                    <span class="brace-text"><span class="emoji">🌊</span></span>
+                    <span class="brace-text">TIDAL POOL</span>
+                    <span class="brace-text"><span class="emoji">🌊</span></span>
+                    <span class="brace-text">$TP</span>
+                    <span class="brace-text"><span class="emoji">🌊</span></span>
+                    <span class="brace-text">TIDAL POOL</span>
+                    <span class="brace-text"><span class="emoji">🌊</span></span>
+                </div>
+                <div class="scrolling-text">
+                    <span class="brace-text">$TP</span>
+                    <span class="brace-text"><span class="emoji">🌊</span></span>
+                    <span class="brace-text">TIDAL POOL</span>
+                    <span class="brace-text"><span class="emoji">🌊</span></span>
+                    <span class="brace-text">$TP</span>
+                    <span class="brace-text"><span class="emoji">🌊</span></span>
+                    <span class="brace-text">TIDAL POOL</span>
+                    <span class="brace-text"><span class="emoji">🌊</span></span>
+                </div>
+            </div>
+        </div>
+        
+
+        <!-- Disclaimer -->
+        <div class="text-center text-sm text-gray-600 mt-16 mb-16">
+            <p>$TP is a meme coin with no intrinsic value or expectation of financial return. For entertainment purposes only.</p>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-primary text-white py-8 mt-32 mb-16">
+        <div class="max-w-6xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center">
+            <p class="gradient-text font-semibold">© 2024 TidalPool</p>
+            <div class="flex space-x-6 mt-4 md:mt-0">
+                <a href="https://x.com/TidalPoolSolana" class="gradient-text hover:opacity-80 transition flex items-center">
+                    <svg class="w-5 h-5 mr-2" viewBox="0 0 24 24" style="fill: var(--primary)">
+                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                    </svg>
+                    Twitter
+                </a>
+                <a href="https://t.me/TidalPoolSolana" class="gradient-text hover:opacity-80 transition flex items-center">
+                    <svg class="w-5 h-5 mr-2" viewBox="0 0 24 24" style="fill: var(--primary)">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.12.02-1.96 1.25-5.54 3.69-.52.36-1 .53-1.42.52-.47-.01-1.37-.26-2.03-.48-.82-.27-1.47-.42-1.42-.88.03-.24.35-.49.96-.75 3.78-1.65 6.31-2.74 7.58-3.27 3.61-1.51 4.36-1.77 4.85-1.78.11 0 .35.03.5.16.13.13.17.31.19.43-.01.07-.01.15-.02.19z"/>
+                    </svg>
+                    Telegram
+                </a>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

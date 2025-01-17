@@ -14,9 +14,9 @@ export class PoolAgent {
             console.log('Starting pool fetch...');
             const programId = new solanaWeb3.PublicKey("CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK");
             
-            // Updated API endpoint for CLMM pools
+            // Updated API endpoint for CLMM pools with correct path
             console.log('Fetching Raydium CLMM API data...');
-            const raydiumResponse = await fetch('https://api.raydium.io/v2/clmm/pools');
+            const raydiumResponse = await fetch('https://api.raydium.io/clmm/v1/pools');
             const raydiumApiData = await raydiumResponse.json();
             console.log(`Fetched ${raydiumApiData?.data?.length || 0} CLMM pairs from Raydium API`);
             
@@ -44,7 +44,7 @@ export class PoolAgent {
 
                 const poolData = await Promise.all(pools.map(async (pool) => {
                     const address = pool.pubkey.toBase58();
-                    const apiData = raydiumApiData.find(p => p.id === address);
+                    const apiData = raydiumApiData.data.find(p => p.id === address);
                     
                     if (!apiData) {
                         return null;
@@ -89,7 +89,7 @@ export class PoolAgent {
                     .map(apiData => {
                         console.log('Processing CLMM pool data:', apiData);
                         
-                        const [tokenA, tokenB] = (apiData.name || '').split('/').slice(0, 2);
+                        const [tokenA, tokenB] = (apiData.name || '').split('-').slice(0, 2);
                         const fees24h = (apiData.volume24h || 0) * 0.0025;
                         
                         const metrics = {

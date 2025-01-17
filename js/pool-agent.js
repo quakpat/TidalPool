@@ -1,3 +1,5 @@
+import { ApiPoolInfoV4, MARKET_STATE_LAYOUT_V3, Market } from "@raydium-io/raydium-sdk";
+
 export class PoolAgent {
     constructor() {
         this.connection = new solanaWeb3.Connection(
@@ -14,118 +16,62 @@ export class PoolAgent {
             console.log('Starting pool fetch...');
             const programId = new solanaWeb3.PublicKey("CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK");
             
-            // Updated to the correct v3 API endpoint
+            // Using Raydium's official API endpoint for CLMM
             console.log('Fetching Raydium CLMM API data...');
-            const raydiumResponse = await fetch('https://api.raydium.io/v2/main/clmm');
+            const raydiumResponse = await fetch('https://api.raydium.io/v2/ammV3/ammPools', {
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
+            
+            if (!raydiumResponse.ok) {
+                throw new Error(`API response error: ${raydiumResponse.status}`);
+            }
+
             const raydiumApiData = await raydiumResponse.json();
             console.log(`Fetched ${raydiumApiData?.data?.length || 0} CLMM pairs from Raydium API`);
-            
-            console.log('Sample raw API data:', raydiumApiData?.data?.[0]); // Debug log
-            
-            console.log('Fetching on-chain pools...');
-            
-            // Simplified config for CLMM pools
-            const config = {
-                filters: [{
-                    dataSize: 1432 // CLMM pool size
-                }]
-            };
+            console.log('Sample raw API data:', raydiumApiData?.data?.[0]);
 
-            try {
-                const pools = await this.connection.getProgramAccounts(
-                    programId,
-                    config
-                );
-                
-                console.log(`Found ${pools.length} raw CLMM pools on-chain`);
-
-                if (pools.length === 0) {
-                    console.log('No CLMM pools found. Trying alternative approach...');
-                    return [];
-                }
-
-                const poolData = await Promise.all(pools.map(async (pool) => {
-                    const address = pool.pubkey.toBase58();
-                    const apiData = raydiumApiData.data.find(p => p.id === address);
+            // Filter and sort pools by fees
+            const highFeePools = (raydiumApiData?.data || [])
+                .filter(pool => {
+                    const fees24h = (pool.volume24h || 0) * 0.0025; // 0.25% fee
+                    return fees24h >= 10000; // Only pools with $10k+ daily fees
+                })
+                .sort((a, b) => (b.volume24h * 0.0025) - (a.volume24h * 0.0025))
+                .slice(0, 10)
+                .map(apiData => {
+                    console.log('Processing CLMM pool data:', apiData);
                     
-                    if (!apiData) {
-                        return null;
-                    }
-
-                    const metrics = await this.calculatePoolMetrics(pool, apiData);
+                    const fees24h = (apiData.volume24h || 0) * 0.0025;
                     
-                    if (!metrics) {
-                        return null;
-                    }
+                    const metrics = {
+                        liquidityUSD: apiData.liquidity || 0,
+                        volume24h: apiData.volume24h || 0,
+                        fees24h: fees24h,
+                        priceImpact: this.calculatePriceImpact(apiData.liquidity || 0, 1000),
+                        ilRisk: this.calculateILRisk(apiData.price24hChange),
+                        activityScore: Math.min(100, ((apiData.volume24h || 0) / (apiData.liquidity || 1)) * 100),
+                        profitabilityScore: 0,
+                        apr: (fees24h * 365 * 100) / (apiData.liquidity || 1),
+                        tokenA: apiData.token0Symbol || apiData.token0 || 'Unknown',
+                        tokenB: apiData.token1Symbol || apiData.token1 || 'Unknown'
+                    };
+
+                    metrics.profitabilityScore = this.calculateProfitabilityScore(metrics);
 
                     return {
-                        address,
+                        address: apiData.id,
                         type: "Raydium CLMM",
                         status: "Active",
                         lastUpdated: new Date().toISOString(),
                         metrics,
                         riskScore: this.calculateRiskScore(metrics)
                     };
-                }));
+                });
 
-                // Filter out null values and apply fees filter
-                const validPools = poolData
-                    .filter(pool => {
-                        const fees24h = pool?.metrics?.fees24h || 0;
-                        return pool !== null && fees24h >= 10000;
-                    })
-                    .sort((a, b) => (b.metrics.fees24h || 0) - (a.metrics.fees24h || 0));
-
-                console.log(`Found ${validPools.length} valid high-fee CLMM pools after filtering`);
-                return validPools;
-
-            } catch (rpcError) {
-                console.error('RPC Error:', rpcError);
-                
-                // Fallback to using Raydium API data only
-                console.log('Falling back to Raydium API data...');
-                const poolData = (raydiumApiData?.data || [])
-                    .filter(pool => {
-                        const fees24h = (pool.volume24h || 0) * 0.0025;
-                        return fees24h >= 10000;
-                    })
-                    .sort((a, b) => (b.volume24h * 0.0025) - (a.volume24h * 0.0025))
-                    .slice(0, 10)
-                    .map(apiData => {
-                        console.log('Processing CLMM pool data:', apiData);
-                        
-                        const [tokenA, tokenB] = (apiData.name || '').split('-').slice(0, 2);
-                        const fees24h = (apiData.volume24h || 0) * 0.0025;
-                        
-                        const metrics = {
-                            liquidityUSD: apiData.liquidity || 0,
-                            volume24h: apiData.volume24h || 0,
-                            fees24h: fees24h,
-                            priceImpact: this.calculatePriceImpact(apiData.liquidity || 0, 1000),
-                            ilRisk: this.calculateILRisk(apiData.price24hChange),
-                            activityScore: Math.min(100, ((apiData.volume24h || 0) / (apiData.liquidity || 1)) * 100),
-                            profitabilityScore: 0,
-                            apr: (fees24h * 365 * 100) / (apiData.liquidity || 1),
-                            tokenA: tokenA || 'Unknown',
-                            tokenB: tokenB || 'Unknown'
-                        };
-
-                        metrics.profitabilityScore = this.calculateProfitabilityScore(metrics);
-
-                        return {
-                            address: apiData.id,
-                            type: "Raydium CLMM",
-                            status: "Active",
-                            lastUpdated: new Date().toISOString(),
-                            metrics,
-                            riskScore: this.calculateRiskScore(metrics)
-                        };
-                    });
-
-                console.log('Sample CLMM pool data:', poolData[0]);
-                console.log(`Found ${poolData.length} high-volume CLMM pools`);
-                return poolData;
-            }
+            console.log(`Found ${highFeePools.length} high-fee CLMM pools`);
+            return highFeePools;
 
         } catch (error) {
             console.error('Error in findProfitablePools:', error);

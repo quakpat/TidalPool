@@ -27,7 +27,7 @@ export class PoolAgent {
             
             // Get the stats for volume data
             console.log('Fetching pool statistics...');
-            const statsResponse = await fetch('https://api.raydium.io/v2/ammV3/positionData');
+            const statsResponse = await fetch('https://api.raydium.io/v2/ammV3/poolInfo');
             
             if (!statsResponse.ok) {
                 throw new Error(`Stats API response error: ${statsResponse.status}`);
@@ -43,20 +43,20 @@ export class PoolAgent {
             const mappedPools = (poolsData?.data || [])
                 .map(pool => {
                     const stats = statsData?.data?.find(s => s.poolId === pool.id);
-                    if (!stats) return null;
-
-                    const volume24h = parseFloat(stats.volume24h || 0);
-                    const fees24h = volume24h * 0.0025; // 0.25% fee
-                    const liquidity = parseFloat(stats.tvl || 0);
+                    
+                    // Get price and volume data from the pool data itself
+                    const volume24h = parseFloat(pool.volume24h || 0);
+                    const tvl = parseFloat(pool.tvl || 0);
+                    const fees24h = volume24h * (pool.ammConfig.tradeFeeRate / 1000000); // Convert fee rate to decimal
 
                     return {
                         id: pool.id,
-                        liquidity,
+                        liquidity: tvl,
                         volume24h,
                         fees24h,
-                        tokenA: pool.tokenA || 'Unknown',
-                        tokenB: pool.tokenB || 'Unknown',
-                        priceChange24h: stats.priceChange24h,
+                        tokenA: pool.tokenA || pool.tokenASymbol || 'Unknown',
+                        tokenB: pool.tokenB || pool.tokenBSymbol || 'Unknown',
+                        priceChange24h: pool.price24hChange,
                         mintA: pool.mintA,
                         mintB: pool.mintB,
                         tickSpacing: pool.tickSpacing,

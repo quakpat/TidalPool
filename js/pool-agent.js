@@ -22,6 +22,9 @@ export class PoolAgent {
             const raydiumResponse = await fetch('https://api.raydium.io/v2/sdk/token/raydium.mainnet.json');
             const raydiumTokens = await raydiumResponse.json();
             
+            console.log('Jupiter tokens:', jupiterTokens.length);
+            console.log('Raydium tokens:', raydiumTokens.tokens.length);
+            
             // Combine both token lists
             jupiterTokens.forEach(token => {
                 this.tokenMetadata.set(token.address, {
@@ -39,6 +42,8 @@ export class PoolAgent {
                 }
             });
             
+            console.log('Sample Jupiter token:', jupiterTokens[0]);
+            console.log('Sample Raydium token:', raydiumTokens.tokens[0]);
             console.log('Loaded metadata for', this.tokenMetadata.size, 'tokens');
         } catch (error) {
             console.error('Error loading token metadata:', error);

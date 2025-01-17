@@ -155,10 +155,36 @@
         window.raydiumSdk = window.RadiumSDK;
     </script>
     <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
-    <script src="pool-agent.js" type="module"></script>
-    <script src="index.js" type="module"></script>
     <script type="module">
-        import { PoolAgent } from './js/pool-agent.js';
+        class PoolAgent {
+            constructor() {
+                this.connection = new solanaWeb3.Connection('https://api.mainnet-beta.solana.com');
+            }
+
+            async findProfitablePools() {
+                try {
+                    // Simplified example data - replace with actual API calls
+                    return [{
+                        address: 'example_pool_address',
+                        metrics: {
+                            tokenATicker: 'SOL',
+                            tokenBTicker: 'USDC',
+                            liquidityUSD: 1000000,
+                            volume24h: 500000,
+                            fees24h: 1500,
+                            apr: 25.5,
+                            priceImpact: 0.5,
+                            ilRisk: 30,
+                            activityScore: 85
+                        },
+                        riskScore: 3
+                    }];
+                } catch (error) {
+                    console.error('Error in findProfitablePools:', error);
+                    throw error;
+                }
+            }
+        }
 
         window.addEventListener('DOMContentLoaded', async () => {
             const poolResultsElement = document.getElementById('pool-results');

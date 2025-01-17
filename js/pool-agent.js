@@ -61,13 +61,25 @@ export class PoolAgent {
                     const fees24h = parseFloat(pool.day?.volumeFee || 0);
                     const apr = parseFloat(pool.day?.apr || 0);
 
-                    // Get token metadata
+                    // Get token metadata and log it
                     const metadataA = this.tokenMetadata.get(pool.mintA);
                     const metadataB = this.tokenMetadata.get(pool.mintB);
+                    
+                    console.log('Token Metadata:', {
+                        mintA: pool.mintA,
+                        mintB: pool.mintB,
+                        metadataA,
+                        metadataB
+                    });
 
                     // Get token symbols from metadata
                     const tokenA = metadataA?.symbol || pool.mintA.slice(0, 4) + '...' + pool.mintA.slice(-4);
                     const tokenB = metadataB?.symbol || pool.mintB.slice(0, 4) + '...' + pool.mintB.slice(-4);
+
+                    console.log('Resolved Tokens:', {
+                        tokenA,
+                        tokenB
+                    });
 
                     return {
                         id: pool.id,
@@ -80,7 +92,7 @@ export class PoolAgent {
                         mintA: pool.mintA,
                         mintB: pool.mintB,
                         tickSpacing: pool.tickSpacing,
-                        feeTier: (pool.ammConfig?.tradeFeeRate || 0) / 10000, // Convert to percentage
+                        feeTier: (pool.ammConfig?.tradeFeeRate || 0) / 10000,
                         apr
                     };
                 })

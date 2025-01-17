@@ -14,11 +14,11 @@ export class PoolAgent {
             console.log('Starting pool fetch...');
             const programId = new solanaWeb3.PublicKey("CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK");
             
-            // Log Raydium API fetch
-            console.log('Fetching Raydium API data...');
-            const raydiumResponse = await fetch('https://api.raydium.io/v2/ammV3/ammPools');
+            // Updated API endpoint for CLMM pools
+            console.log('Fetching Raydium CLMM API data...');
+            const raydiumResponse = await fetch('https://api.raydium.io/v2/clmm/pools');
             const raydiumApiData = await raydiumResponse.json();
-            console.log(`Fetched ${raydiumApiData.length} CLMM pairs from Raydium API`);
+            console.log(`Fetched ${raydiumApiData?.data?.length || 0} CLMM pairs from Raydium API`);
             
             console.log('Fetching on-chain pools...');
             
@@ -79,17 +79,16 @@ export class PoolAgent {
                 
                 // Fallback to using Raydium API data only
                 console.log('Falling back to Raydium API data...');
-                const poolData = raydiumApiData
+                const poolData = (raydiumApiData?.data || [])
                     .filter(pool => {
-                        const fees24h = (pool.volume24h || 0) * 0.0025; // 0.25% fee
-                        return fees24h >= 10000; // Only pools with $10k+ daily fees
+                        const fees24h = (pool.volume24h || 0) * 0.0025;
+                        return fees24h >= 10000;
                     })
-                    .sort((a, b) => (b.volume24h * 0.0025) - (a.volume24h * 0.0025)) // Sort by fees
-                    .slice(0, 10) // Top 10 pools
+                    .sort((a, b) => (b.volume24h * 0.0025) - (a.volume24h * 0.0025))
+                    .slice(0, 10)
                     .map(apiData => {
                         console.log('Processing CLMM pool data:', apiData);
                         
-                        // Fix token name display
                         const [tokenA, tokenB] = (apiData.name || '').split('/').slice(0, 2);
                         const fees24h = (apiData.volume24h || 0) * 0.0025;
                         
@@ -106,7 +105,6 @@ export class PoolAgent {
                             tokenB: tokenB || 'Unknown'
                         };
 
-                        // Calculate profitability score
                         metrics.profitabilityScore = this.calculateProfitabilityScore(metrics);
 
                         return {

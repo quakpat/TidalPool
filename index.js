@@ -1,3 +1,5 @@
+console.log('index.js loaded successfully!');
+
 // Add wallet connection handling
 let wallet = null;
 let poolAgent = null;

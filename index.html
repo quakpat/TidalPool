@@ -159,14 +159,10 @@
     <script type="module">
         class PoolAgent {
             constructor() {
-                // Get API key from environment variables
-                const apiKey = process.env.HELIUS_API_KEY || '';
-                if (!apiKey) {
-                    console.error('Helius API key not found!');
-                }
-                
+                // Remove dependency on process.env
+                // Instead use a public RPC endpoint or your own endpoint
                 this.connection = new solanaWeb3.Connection(
-                    `https://rpc.helius.xyz/?api-key=${apiKey}`,
+                    'https://api.mainnet-beta.solana.com',
                     'confirmed'
                 );
             }
@@ -312,13 +308,9 @@
                 try {
                     console.log('Checking token holdings for address:', publicKey.toString());
                     
-                    const apiKey = process.env.HELIUS_API_KEY || '';
-                    if (!apiKey) {
-                        console.error('Helius API key not found!');
-                        return false;
-                    }
+                    // Use the same public RPC endpoint
                     const connection = new solanaWeb3.Connection(
-                        `https://rpc.helius.xyz/?api-key=${apiKey}`,
+                        'https://api.mainnet-beta.solana.com',
                         'confirmed'
                     );
                     
@@ -706,13 +698,9 @@
             try {
                 console.log('Checking token holdings for address:', publicKey.toString());
                 
-                const apiKey = process.env.HELIUS_API_KEY || '';
-                if (!apiKey) {
-                    console.error('Helius API key not found!');
-                    return false;
-                }
+                // Use the same public RPC endpoint
                 const connection = new solanaWeb3.Connection(
-                    `https://rpc.helius.xyz/?api-key=${apiKey}`,
+                    'https://api.mainnet-beta.solana.com',
                     'confirmed'
                 );
                 

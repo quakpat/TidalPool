@@ -70,9 +70,13 @@ export class PoolAgent {
                     const fees24h = parseFloat(pool.day?.volumeFee || 0);
                     const apr = parseFloat(pool.day?.apr || 0);
 
+                    // Get token metadata
+                    const metadataA = this.tokenMetadata.get(pool.mintA);
+                    const metadataB = this.tokenMetadata.get(pool.mintB);
+
                     // Get token symbols from metadata
-                    const tokenA = this.tokenMetadata.get(pool.mintA)?.symbol || pool.mintA.slice(0, 4) + '...' + pool.mintA.slice(-4);
-                    const tokenB = this.tokenMetadata.get(pool.mintB)?.symbol || pool.mintB.slice(0, 4) + '...' + pool.mintB.slice(-4);
+                    const tokenA = metadataA?.symbol || pool.mintA.slice(0, 4) + '...' + pool.mintA.slice(-4);
+                    const tokenB = metadataB?.symbol || pool.mintB.slice(0, 4) + '...' + pool.mintB.slice(-4);
 
                     console.log('Pool stats:', {
                         id: pool.id,

@@ -2,11 +2,18 @@
 
 export class PoolAgent {
     constructor() {
+        if (!process.env.HELIUS_API_KEY) {
+            throw new Error('HELIUS_API_KEY environment variable is not set');
+        }
+        
+        const rpcUrl = `https://rpc.helius.xyz/?api-key=${process.env.HELIUS_API_KEY}`;
+        const wsUrl = `wss://rpc.helius.xyz/?api-key=${process.env.HELIUS_API_KEY}`;
+        
         this.connection = new solanaWeb3.Connection(
-            'https://rpc.helius.xyz/?api-key=b7b6ec9a-e258-4f73-ba77-429f2e0885f5',
+            rpcUrl,
             {
                 commitment: 'confirmed',
-                wsEndpoint: 'wss://rpc.helius.xyz/?api-key=b7b6ec9a-e258-4f73-ba77-429f2e0885f5'
+                wsEndpoint: wsUrl
             }
         );
         this.tokenMetadata = new Map();

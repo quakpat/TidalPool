@@ -152,7 +152,7 @@
                                 ${pools.slice(0, 5).map(pool => `
                                     <li class="text-white flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                                         <div class="min-w-0 break-all">
-                                            <div class="font-semibold">${pool.metrics.tokenA}/${pool.metrics.tokenB}</div>
+                                            <div class="font-semibold">${pool.metrics.tokenATicker || pool.metrics.tokenA}/${pool.metrics.tokenBTicker || pool.metrics.tokenB}</div>
                                             <div>Pool: ${pool.address}</div>
                                             <div class="text-sm text-gray-400 space-y-1">
                                                 <div>Liquidity: $${(pool.metrics.liquidityUSD || 0).toLocaleString()}</div>

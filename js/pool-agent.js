@@ -37,9 +37,9 @@ export class PoolAgent {
                     const fees24h = parseFloat(pool.day?.volumeFee || 0);
                     const apr = parseFloat(pool.day?.apr || 0);
 
-                    // Get token addresses from mints
-                    const tokenA = pool.mintA?.slice(0, 6) + '...' + pool.mintA?.slice(-4);
-                    const tokenB = pool.mintB?.slice(0, 6) + '...' + pool.mintB?.slice(-4);
+                    // Get token symbols instead of addresses
+                    const tokenA = pool.tokenA || 'Unknown';
+                    const tokenB = pool.tokenB || 'Unknown';
 
                     console.log('Pool stats:', {
                         id: pool.id,

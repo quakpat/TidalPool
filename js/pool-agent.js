@@ -1,4 +1,4 @@
-import { ApiPoolInfoV4, MARKET_STATE_LAYOUT_V3, Market } from "@raydium-io/raydium-sdk";
+// const { ApiPoolInfoV4, MARKET_STATE_LAYOUT_V3, Market } = window.raydiumSdk;
 
 export class PoolAgent {
     constructor() {

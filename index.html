@@ -159,7 +159,7 @@
         class PoolAgent {
             constructor() {
                 this.connection = new solanaWeb3.Connection(
-                    'https://solana-mainnet.g.alchemy.com/v2/actual-api-key-here',
+                    'https://rpc.helius.xyz/?api-key=b7b6ec9a-e258-4f73-ba77-429f2e0885f5',
                     'confirmed'
                 );
             }
@@ -499,6 +499,10 @@
                     <span class="tp-text"><span class="emoji">🌊</span></span>
                     <span class="tp-text">TIDAL POOL</span>
                     <span class="tp-text"><span class="emoji">🌊</span></span>
+                    <span class="tp-text">$TP</span>
+                    <span class="tp-text"><span class="emoji">🌊</span></span>
+                    <span class="tp-text">TIDAL POOL</span>
+                    <span class="tp-text"><span class="emoji">🌊</span></span>
                 </div>
             </div>
         </div>
@@ -538,9 +542,9 @@
 
         async function checkTokenHolding(publicKey) {
             try {
-                // Use Helius's public RPC endpoint
+                // Use Quicknode's public RPC endpoint
                 const connection = new solanaWeb3.Connection(
-                    'https://rpc.helius.xyz/?api-key=1d0f0c10-b737-41f2-8086-c775507f3bd6',
+                    'https://api.devnet.solana.com',
                     'confirmed'
                 );
                 

@@ -20,10 +20,10 @@ export class PoolAgent {
             
             // Load Raydium token list
             const raydiumResponse = await fetch('https://api.raydium.io/v2/sdk/token/raydium.mainnet.json');
-            const raydiumTokens = await raydiumResponse.json();
+            const raydiumData = await raydiumResponse.json();
             
             console.log('Jupiter tokens:', jupiterTokens.length);
-            console.log('Raydium tokens:', raydiumTokens.tokens.length);
+            console.log('Raydium tokens:', raydiumData.length);
             
             // Combine both token lists
             jupiterTokens.forEach(token => {
@@ -33,29 +33,36 @@ export class PoolAgent {
                 });
             });
             
-            raydiumTokens.tokens.forEach(token => {
-                if (!this.tokenMetadata.has(token.mint)) {
-                    this.tokenMetadata.set(token.mint, {
-                        symbol: token.symbol,
-                        name: token.name
-                    });
-                }
-            });
+            // Check if raydiumData is an array before processing
+            if (Array.isArray(raydiumData)) {
+                raydiumData.forEach(token => {
+                    if (!this.tokenMetadata.has(token.address)) {
+                        this.tokenMetadata.set(token.address, {
+                            symbol: token.symbol,
+                            name: token.name
+                        });
+                    }
+                });
+            }
             
             console.log('Sample Jupiter token:', jupiterTokens[0]);
-            console.log('Sample Raydium token:', raydiumTokens.tokens[0]);
+            console.log('Sample Raydium token:', raydiumData[0]);
             console.log('Loaded metadata for', this.tokenMetadata.size, 'tokens');
+
+            // Add a small delay to ensure metadata is loaded
+            await new Promise(resolve => setTimeout(resolve, 1000));
         } catch (error) {
             console.error('Error loading token metadata:', error);
+            throw error; // Re-throw to see the full error in the console
         }
     }
 
     async findProfitablePools() {
         try {
-            // Load token metadata first
+            // Load token metadata first and wait for it to complete
             await this.loadTokenMetadata();
             
-            console.log('Starting CLMM pool fetch...');
+            console.log('Token metadata loaded, starting pool fetch...');
             
             // Fetch CLMM pool data
             console.log('Fetching Raydium CLMM pools...');

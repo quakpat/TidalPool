@@ -54,15 +54,6 @@ export class PoolAgent {
             // Process pools and filter for high TVL
             const mappedPools = (poolsData?.data || [])
                 .map(pool => {
-                    // Log individual pool data to see available properties
-                    console.log('Raw pool data:', {
-                        mintA: pool.mintA,
-                        mintB: pool.mintB,
-                        tokenMetadataA: this.tokenMetadata.get(pool.mintA),
-                        tokenMetadataB: this.tokenMetadata.get(pool.mintB),
-                        fullPool: pool
-                    });
-
                     // Extract data from day stats
                     const volume24h = parseFloat(pool.day?.volume || 0);
                     const tvl = parseFloat(pool.tvl || 0);
@@ -77,16 +68,6 @@ export class PoolAgent {
                     // Get token symbols from metadata
                     const tokenA = metadataA?.symbol || pool.mintA.slice(0, 4) + '...' + pool.mintA.slice(-4);
                     const tokenB = metadataB?.symbol || pool.mintB.slice(0, 4) + '...' + pool.mintB.slice(-4);
-
-                    console.log('Pool stats:', {
-                        id: pool.id,
-                        volume24h,
-                        tvl,
-                        feeRate: (feeRate * 100).toFixed(3) + '%',
-                        fees24h,
-                        apr: apr.toFixed(2) + '%',
-                        pair: `${tokenA}/${tokenB}`
-                    });
 
                     return {
                         id: pool.id,

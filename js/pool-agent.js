@@ -14,11 +14,13 @@ export class PoolAgent {
             console.log('Starting pool fetch...');
             const programId = new solanaWeb3.PublicKey("CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK");
             
-            // Updated to v3 API endpoint
+            // Updated to the correct v3 API endpoint
             console.log('Fetching Raydium CLMM API data...');
-            const raydiumResponse = await fetch('https://api-v3.raydium.io/clmm/pools');
+            const raydiumResponse = await fetch('https://api.raydium.io/v2/main/clmm');
             const raydiumApiData = await raydiumResponse.json();
             console.log(`Fetched ${raydiumApiData?.data?.length || 0} CLMM pairs from Raydium API`);
+            
+            console.log('Sample raw API data:', raydiumApiData?.data?.[0]); // Debug log
             
             console.log('Fetching on-chain pools...');
             
@@ -66,12 +68,15 @@ export class PoolAgent {
                     };
                 }));
 
-                // Filter out null values and apply liquidity filter
+                // Filter out null values and apply fees filter
                 const validPools = poolData
-                    .filter(pool => pool !== null && pool.metrics?.liquidityUSD > 10000)
-                    .sort((a, b) => b.metrics.profitabilityScore - a.metrics.profitabilityScore);
+                    .filter(pool => {
+                        const fees24h = pool?.metrics?.fees24h || 0;
+                        return pool !== null && fees24h >= 10000;
+                    })
+                    .sort((a, b) => (b.metrics.fees24h || 0) - (a.metrics.fees24h || 0));
 
-                console.log(`Found ${validPools.length} valid CLMM pools after filtering`);
+                console.log(`Found ${validPools.length} valid high-fee CLMM pools after filtering`);
                 return validPools;
 
             } catch (rpcError) {

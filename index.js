@@ -1,3 +1,5 @@
+import { PoolAgent } from './pool-agent.js';
+
 console.log('index.js loaded successfully!');
 
 // Add wallet connection handling

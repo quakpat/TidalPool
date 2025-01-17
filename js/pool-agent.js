@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 // const { ApiPoolInfoV4, MARKET_STATE_LAYOUT_V3, Market } = window.raydiumSdk;
 
 export class PoolAgent {

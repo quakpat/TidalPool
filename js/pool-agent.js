@@ -15,48 +15,42 @@ export class PoolAgent {
         try {
             console.log('Starting pool fetch...');
             
-            // First get the pools list
+            // Fetch both pools and stats
             console.log('Fetching Raydium CLMM API data...');
-            const poolsResponse = await fetch('https://api.raydium.io/v2/ammV3/ammPools', {
-                headers: {
-                    'Accept': 'application/json'
-                }
-            });
+            const [poolsResponse, statsResponse] = await Promise.all([
+                fetch('https://api.raydium.io/v2/ammV3/ammPools'),
+                fetch('https://api.raydium.io/v2/main/pairs')
+            ]);
             
             if (!poolsResponse.ok) {
-                throw new Error(`API response error: ${poolsResponse.status}`);
+                throw new Error(`Pools API response error: ${poolsResponse.status}`);
+            }
+            if (!statsResponse.ok) {
+                throw new Error(`Stats API response error: ${statsResponse.status}`);
             }
 
-            const poolsData = await poolsResponse.json();
+            const [poolsData, statsData] = await Promise.all([
+                poolsResponse.json(),
+                statsResponse.json()
+            ]);
+
             console.log(`Fetched ${poolsData?.data?.length || 0} CLMM pairs from Raydium API`);
-            
-            // Get volume data
-            console.log('Fetching volume data...');
-            const volumeResponse = await fetch('https://api.raydium.io/v2/ammV3/summary', {
-                headers: {
-                    'Accept': 'application/json'
-                }
-            });
-
-            if (!volumeResponse.ok) {
-                throw new Error(`Volume API response error: ${volumeResponse.status}`);
-            }
-
-            const volumeData = await volumeResponse.json();
-            console.log('Sample volume data:', volumeData?.data?.[0]);
+            console.log('Sample pools data:', poolsData?.data?.[0]);
+            console.log('Sample stats data:', statsData?.[0]);
 
             // Process pools and filter for high fees
             const highFeePools = (poolsData?.data || [])
                 .map(pool => {
-                    const volumeInfo = volumeData?.data?.find(v => v.ammId === pool.id);
-                    if (!volumeInfo) return null;
+                    const stats = statsData?.find(s => s.ammId === pool.id);
+                    if (!stats) return null;
 
-                    const volume24h = parseFloat(volumeInfo.volume24h || 0);
+                    const volume24h = parseFloat(stats.volume24h || 0);
                     const fees24h = volume24h * 0.0025; // 0.25% fee
-                    const liquidity = parseFloat(volumeInfo.liquidity || 0);
+                    const liquidity = parseFloat(stats.liquidity || 0);
 
                     return {
                         ...pool,
+                        ...stats,
                         volume24h,
                         fees24h,
                         liquidity
@@ -73,7 +67,7 @@ export class PoolAgent {
                         volume24h: pool.volume24h,
                         fees24h: pool.fees24h,
                         priceImpact: this.calculatePriceImpact(pool.liquidity, 1000),
-                        ilRisk: this.calculateILRisk(pool.price24hChange),
+                        ilRisk: this.calculateILRisk(pool.priceChange24h),
                         activityScore: Math.min(100, (pool.volume24h / (pool.liquidity || 1)) * 100),
                         profitabilityScore: 0,
                         apr: (pool.fees24h * 365 * 100) / (pool.liquidity || 1),

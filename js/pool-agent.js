@@ -14,54 +14,81 @@ export class PoolAgent {
     async findProfitablePools() {
         try {
             console.log('Starting pool fetch...');
-            const programId = new solanaWeb3.PublicKey("CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK");
             
-            // Using Raydium's official API endpoint for CLMM
+            // First, get the pools list
             console.log('Fetching Raydium CLMM API data...');
-            const raydiumResponse = await fetch('https://api.raydium.io/v2/ammV3/ammPools', {
+            const poolsResponse = await fetch('https://api.raydium.io/v2/ammV3/ammPools', {
                 headers: {
                     'Accept': 'application/json'
                 }
             });
             
-            if (!raydiumResponse.ok) {
-                throw new Error(`API response error: ${raydiumResponse.status}`);
+            if (!poolsResponse.ok) {
+                throw new Error(`API response error: ${poolsResponse.status}`);
             }
 
-            const raydiumApiData = await raydiumResponse.json();
-            console.log(`Fetched ${raydiumApiData?.data?.length || 0} CLMM pairs from Raydium API`);
-            console.log('Sample raw API data:', raydiumApiData?.data?.[0]);
+            const poolsData = await poolsResponse.json();
+            console.log(`Fetched ${poolsData?.data?.length || 0} CLMM pairs from Raydium API`);
+            console.log('Sample raw API data:', poolsData?.data?.[0]);
 
-            // Filter and sort pools by fees
-            const highFeePools = (raydiumApiData?.data || [])
-                .filter(pool => {
-                    const fees24h = (pool.volume24h || 0) * 0.0025; // 0.25% fee
-                    return fees24h >= 10000; // Only pools with $10k+ daily fees
+            // Now get the 24h stats
+            console.log('Fetching pool statistics...');
+            const statsResponse = await fetch('https://api.raydium.io/v2/ammV3/poolStats', {
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
+
+            if (!statsResponse.ok) {
+                throw new Error(`Stats API response error: ${statsResponse.status}`);
+            }
+
+            const statsData = await statsResponse.json();
+            console.log('Sample stats data:', statsData?.data?.[0]);
+
+            // Combine pool and stats data
+            const highFeePools = (poolsData?.data || [])
+                .map(pool => {
+                    const stats = statsData?.data?.find(stat => stat.poolId === pool.id);
+                    if (!stats) return null;
+
+                    const volume24h = parseFloat(stats.volume24h || 0);
+                    const fees24h = volume24h * 0.0025; // 0.25% fee
+                    const liquidity = parseFloat(stats.liquidity || 0);
+
+                    return {
+                        pool,
+                        stats,
+                        fees24h,
+                        volume24h,
+                        liquidity
+                    };
                 })
-                .sort((a, b) => (b.volume24h * 0.0025) - (a.volume24h * 0.0025))
+                .filter(item => {
+                    return item && item.fees24h >= 10000; // Only pools with $10k+ daily fees
+                })
+                .sort((a, b) => b.fees24h - a.fees24h)
                 .slice(0, 10)
-                .map(apiData => {
-                    console.log('Processing CLMM pool data:', apiData);
-                    
-                    const fees24h = (apiData.volume24h || 0) * 0.0025;
+                .map(({ pool, stats, fees24h, volume24h, liquidity }) => {
+                    console.log('Processing high-fee pool:', pool.id, fees24h);
                     
                     const metrics = {
-                        liquidityUSD: apiData.liquidity || 0,
-                        volume24h: apiData.volume24h || 0,
+                        liquidityUSD: liquidity,
+                        volume24h: volume24h,
                         fees24h: fees24h,
-                        priceImpact: this.calculatePriceImpact(apiData.liquidity || 0, 1000),
-                        ilRisk: this.calculateILRisk(apiData.price24hChange),
-                        activityScore: Math.min(100, ((apiData.volume24h || 0) / (apiData.liquidity || 1)) * 100),
+                        priceImpact: this.calculatePriceImpact(liquidity, 1000),
+                        ilRisk: this.calculateILRisk(stats.priceChange24h),
+                        activityScore: Math.min(100, (volume24h / liquidity) * 100),
                         profitabilityScore: 0,
-                        apr: (fees24h * 365 * 100) / (apiData.liquidity || 1),
-                        tokenA: apiData.token0Symbol || apiData.token0 || 'Unknown',
-                        tokenB: apiData.token1Symbol || apiData.token1 || 'Unknown'
+                        apr: (fees24h * 365 * 100) / liquidity,
+                        tokenA: pool.tokenASymbol || 'Unknown',
+                        tokenB: pool.tokenBSymbol || 'Unknown'
                     };
 
                     metrics.profitabilityScore = this.calculateProfitabilityScore(metrics);
 
                     return {
-                        address: apiData.id,
+                        address: pool.id,
                         type: "Raydium CLMM",
                         status: "Active",
                         lastUpdated: new Date().toISOString(),

@@ -15,7 +15,7 @@ export class PoolAgent {
         try {
             console.log('Starting pool fetch...');
             
-            // First, get the pools list
+            // Fetch both pools and stats in one call
             console.log('Fetching Raydium CLMM API data...');
             const poolsResponse = await fetch('https://api.raydium.io/v2/ammV3/ammPools', {
                 headers: {
@@ -31,58 +31,37 @@ export class PoolAgent {
             console.log(`Fetched ${poolsData?.data?.length || 0} CLMM pairs from Raydium API`);
             console.log('Sample raw API data:', poolsData?.data?.[0]);
 
-            // Now get the 24h stats
-            console.log('Fetching pool statistics...');
-            const statsResponse = await fetch('https://api.raydium.io/v2/ammV3/poolStats', {
-                headers: {
-                    'Accept': 'application/json'
-                }
-            });
-
-            if (!statsResponse.ok) {
-                throw new Error(`Stats API response error: ${statsResponse.status}`);
-            }
-
-            const statsData = await statsResponse.json();
-            console.log('Sample stats data:', statsData?.data?.[0]);
-
-            // Combine pool and stats data
+            // Process pools and filter for high fees
             const highFeePools = (poolsData?.data || [])
-                .map(pool => {
-                    const stats = statsData?.data?.find(stat => stat.poolId === pool.id);
-                    if (!stats) return null;
-
-                    const volume24h = parseFloat(stats.volume24h || 0);
+                .filter(pool => {
+                    const volume24h = parseFloat(pool.volume24h || 0);
                     const fees24h = volume24h * 0.0025; // 0.25% fee
-                    const liquidity = parseFloat(stats.liquidity || 0);
-
-                    return {
-                        pool,
-                        stats,
-                        fees24h,
-                        volume24h,
-                        liquidity
-                    };
+                    return fees24h >= 10000; // Only pools with $10k+ daily fees
                 })
-                .filter(item => {
-                    return item && item.fees24h >= 10000; // Only pools with $10k+ daily fees
+                .sort((a, b) => {
+                    const feesB = parseFloat(b.volume24h || 0) * 0.0025;
+                    const feesA = parseFloat(a.volume24h || 0) * 0.0025;
+                    return feesB - feesA;
                 })
-                .sort((a, b) => b.fees24h - a.fees24h)
                 .slice(0, 10)
-                .map(({ pool, stats, fees24h, volume24h, liquidity }) => {
-                    console.log('Processing high-fee pool:', pool.id, fees24h);
+                .map(pool => {
+                    console.log('Processing high-fee pool:', pool.id);
+                    
+                    const volume24h = parseFloat(pool.volume24h || 0);
+                    const fees24h = volume24h * 0.0025;
+                    const liquidity = parseFloat(pool.liquidity || 0);
                     
                     const metrics = {
                         liquidityUSD: liquidity,
                         volume24h: volume24h,
                         fees24h: fees24h,
                         priceImpact: this.calculatePriceImpact(liquidity, 1000),
-                        ilRisk: this.calculateILRisk(stats.priceChange24h),
-                        activityScore: Math.min(100, (volume24h / liquidity) * 100),
+                        ilRisk: this.calculateILRisk(pool.price24hChange),
+                        activityScore: Math.min(100, (volume24h / (liquidity || 1)) * 100),
                         profitabilityScore: 0,
-                        apr: (fees24h * 365 * 100) / liquidity,
-                        tokenA: pool.tokenASymbol || 'Unknown',
-                        tokenB: pool.tokenBSymbol || 'Unknown'
+                        apr: (fees24h * 365 * 100) / (liquidity || 1),
+                        tokenA: pool.tokenA || pool.mintA || 'Unknown',
+                        tokenB: pool.tokenB || pool.mintB || 'Unknown'
                     };
 
                     metrics.profitabilityScore = this.calculateProfitabilityScore(metrics);
@@ -98,6 +77,7 @@ export class PoolAgent {
                 });
 
             console.log(`Found ${highFeePools.length} high-fee CLMM pools`);
+            console.log('Sample processed pool:', highFeePools[0]);
             return highFeePools;
 
         } catch (error) {

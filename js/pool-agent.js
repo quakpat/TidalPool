@@ -24,38 +24,26 @@ export class PoolAgent {
             }
 
             const poolsData = await poolsResponse.json();
-            
-            // Get the stats for volume data
-            console.log('Fetching pool statistics...');
-            const statsResponse = await fetch('https://api.raydium.io/v2/ammV3/poolInfo');
-            
-            if (!statsResponse.ok) {
-                throw new Error(`Stats API response error: ${statsResponse.status}`);
-            }
-
-            const statsData = await statsResponse.json();
 
             console.log(`Fetched ${poolsData?.data?.length || 0} CLMM pools`);
             console.log('Sample CLMM pool:', poolsData?.data?.[0]);
-            console.log('Sample stats:', statsData?.data?.[0]);
 
             // Process pools and filter for high TVL
             const mappedPools = (poolsData?.data || [])
                 .map(pool => {
-                    const stats = statsData?.data?.find(s => s.poolId === pool.id);
-                    
-                    // Get price and volume data from the pool data itself
+                    // Extract data directly from pool
                     const volume24h = parseFloat(pool.volume24h || 0);
                     const tvl = parseFloat(pool.tvl || 0);
-                    const fees24h = volume24h * (pool.ammConfig.tradeFeeRate / 1000000); // Convert fee rate to decimal
+                    const feeRate = pool.ammConfig.tradeFeeRate / 1000000; // Convert from parts per million to decimal
+                    const fees24h = volume24h * feeRate;
 
                     return {
                         id: pool.id,
                         liquidity: tvl,
                         volume24h,
                         fees24h,
-                        tokenA: pool.tokenA || pool.tokenASymbol || 'Unknown',
-                        tokenB: pool.tokenB || pool.tokenBSymbol || 'Unknown',
+                        tokenA: pool.tokenASymbol || pool.tokenA || 'Unknown',
+                        tokenB: pool.tokenBSymbol || pool.tokenB || 'Unknown',
                         priceChange24h: pool.price24hChange,
                         mintA: pool.mintA,
                         mintB: pool.mintB,
@@ -63,16 +51,18 @@ export class PoolAgent {
                         feeTier: pool.ammConfig.tradeFeeRate / 10000 // Convert to percentage
                     };
                 })
-                .filter(pool => pool && pool.liquidity > 0);
+                .filter(pool => pool.liquidity > 0);
 
-            console.log(`Found ${mappedPools.length} active CLMM pools`);
+            console.log(`Found ${mappedPools.length} active CLMM pools with liquidity`);
 
             const highFeePools = mappedPools
                 .filter(pool => pool.fees24h >= 10000)
                 .sort((a, b) => b.fees24h - a.fees24h)
                 .slice(0, 10)
                 .map(pool => {
-                    console.log('Processing high-fee CLMM pool:', pool.id, 
+                    console.log('Processing high-fee CLMM pool:', 
+                        `\nID: ${pool.id}`,
+                        `\nPair: ${pool.tokenA}/${pool.tokenB}`,
                         `\nFees: $${pool.fees24h.toFixed(2)}`, 
                         `\nTVL: $${pool.liquidity.toFixed(2)}`,
                         `\nFee Tier: ${pool.feeTier}%`

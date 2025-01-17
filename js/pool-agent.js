@@ -75,7 +75,7 @@ export class PoolAgent {
                 .sort((a, b) => b.fees24h - a.fees24h)
                 .slice(0, 10)
                 .map(pool => {
-                    const poolUrl = `https://raydium.io/clmm/create-position/?id=${pool.id}`;
+                    const poolUrl = `https://raydium.io/clmm/create-position/?pool_id=${pool.id}`;
                     
                     console.log('High-fee CLMM pool found:', {
                         id: pool.id,

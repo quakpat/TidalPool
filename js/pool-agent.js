@@ -2,6 +2,8 @@ export class PoolAgent {
     constructor() {
         this.connection = new solanaWeb3.Connection('https://rpc.helius.xyz/?api-key=b7b6ec9a-e258-4f73-ba77-429f2e0885f5');
     }
+    
+
     async findProfitablePools() {
         try {
             console.log('Starting pool fetch...');
@@ -14,20 +16,19 @@ export class PoolAgent {
             console.log(`Fetched ${raydiumApiData.length} pairs from Raydium API`);
             
             console.log('Fetching on-chain pools...');
+            const config = {
+                commitment: 'confirmed',
+                encoding: 'jsonParsed',
+                filters: [
+                    {
+                        dataSize: 752 // Raydium pool size
+                    }
+                ]
+            };
+
             const pools = await this.connection.getProgramAccounts(
                 programId,
-                {
-                    encoding: 'base64',
-                    commitment: 'confirmed',
-                    filters: [
-                        {
-                            memcmp: {
-                                offset: 0,
-                                bytes: "3"
-                            }
-                        }
-                    ]
-                }
+                config
             );
             
             console.log(`Found ${pools.length} raw pools on-chain`);
@@ -81,7 +82,7 @@ export class PoolAgent {
         }
     }
 
-    async calculatePoolMetrics(pool, apiData) {
+    calculatePoolMetrics(pool, apiData) {
         try {
             const volume24h = apiData?.volume24h || 0;
             const liquidityUSD = apiData?.liquidity || 0;
@@ -114,7 +115,7 @@ export class PoolAgent {
                 ilRisk,
                 activityScore,
                 profitabilityScore,
-                apr: (fees24h * 365 * 100) / liquidityUSD, // Annualized fee APR
+                apr: (fees24h * 365 * 100) / liquidityUSD,
                 tokenA: apiData?.token0Symbol || 'Unknown',
                 tokenB: apiData?.token1Symbol || 'Unknown'
             };

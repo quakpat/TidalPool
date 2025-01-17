@@ -178,24 +178,40 @@
                     }
 
                     // Process and sort pools
-                    const processedPools = data.data.map(pool => {
-                        console.log('Processing pool:', pool);
-                        return {
-                            address: pool.id,
-                            metrics: {
-                                tokenATicker: pool.token0Symbol,
-                                tokenBTicker: pool.token1Symbol,
-                                liquidityUSD: parseFloat(pool.tvl) || 0,
-                                volume24h: parseFloat(pool.volume24h) || 0,
-                                fees24h: parseFloat(pool.fee24h) || 0,
-                                apr: parseFloat(pool.apr24h) || 0,
-                                priceImpact: parseFloat(pool.priceImpact) || 0,
-                                ilRisk: this.calculateILRisk(pool.price7d, pool.price24h),
-                                activityScore: this.calculateActivityScore(pool.volume24h, pool.tvl)
-                            },
-                            riskScore: this.calculateRiskScore(pool)
-                        };
-                    });
+                    const processedPools = data.data
+                        .filter(pool => 
+                            pool.tvl && 
+                            pool.volume24h && 
+                            pool.fee24h && 
+                            pool.apr24h &&
+                            pool.token0Symbol &&
+                            pool.token1Symbol
+                        )
+                        .map(pool => {
+                            console.log('Processing pool:', pool);
+                            return {
+                                address: pool.id,
+                                metrics: {
+                                    tokenATicker: pool.token0Symbol || 'Unknown',
+                                    tokenBTicker: pool.token1Symbol || 'Unknown',
+                                    liquidityUSD: parseFloat(pool.tvl) || 0,
+                                    volume24h: parseFloat(pool.volume24h) || 0,
+                                    fees24h: parseFloat(pool.fee24h) || 0,
+                                    apr: parseFloat(pool.apr24h) || 0,
+                                    priceImpact: parseFloat(pool.priceImpact) || 0,
+                                    ilRisk: this.calculateILRisk(pool.price7d, pool.price24h),
+                                    activityScore: this.calculateActivityScore(
+                                        parseFloat(pool.volume24h) || 0,
+                                        parseFloat(pool.tvl) || 0
+                                    )
+                                },
+                                riskScore: this.calculateRiskScore({
+                                    tvl: parseFloat(pool.tvl) || 0,
+                                    volume24h: parseFloat(pool.volume24h) || 0,
+                                    price24h: parseFloat(pool.price24h) || 0
+                                })
+                            };
+                        });
 
                     console.log('Processed pools:', processedPools);
 
@@ -224,7 +240,7 @@
 
             calculateILRisk(price7d, price24h) {
                 if (!price7d || !price24h) return 50;
-                const volatility = Math.abs((price24h - price7d) / price7d) * 100;
+                const volatility = Math.abs((parseFloat(price24h) - parseFloat(price7d)) / parseFloat(price7d)) * 100;
                 return Math.min(Math.round(volatility * 2), 100);
             }
 

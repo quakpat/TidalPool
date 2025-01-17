@@ -19,7 +19,7 @@ export class PoolAgent {
             console.log('Fetching Raydium data...');
             const [poolsResponse, statsResponse] = await Promise.all([
                 fetch('https://api.raydium.io/v2/ammV3/ammPools'),
-                fetch('https://api.raydium.io/v2/ammV3/pairs')  // Updated endpoint
+                fetch('https://api.raydium.io/v2/pairs')  // Updated endpoint
             ]);
             
             if (!poolsResponse.ok) {
@@ -36,6 +36,8 @@ export class PoolAgent {
 
             console.log(`Fetched ${poolsData?.data?.length || 0} CLMM pairs`);
             console.log(`Fetched ${statsData?.data?.length || 0} pairs stats`);
+            console.log('Sample pool data:', poolsData?.data?.[0]);
+            console.log('Sample stats data:', statsData?.data?.[0]);
 
             console.log('Processing pools...');
             
@@ -44,7 +46,8 @@ export class PoolAgent {
                 .map(pool => {
                     // Match using mintA and mintB combination
                     const stats = statsData?.data?.find(s => 
-                        s.mintA === pool.mintA && s.mintB === pool.mintB
+                        (s.mintA === pool.mintA && s.mintB === pool.mintB) ||
+                        (s.mintA === pool.mintB && s.mintB === pool.mintA)
                     );
                     
                     if (!stats) {

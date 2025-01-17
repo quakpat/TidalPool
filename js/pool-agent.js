@@ -16,8 +16,22 @@ export class PoolAgent {
 
     async checkWalletAuth(wallet) {
         try {
-            if (!wallet || !wallet.publicKey) {
+            if (!wallet) {
+                throw new Error('Wallet object is undefined');
+            }
+
+            if (!wallet.isConnected) {
+                throw new Error('Wallet is not connected');
+            }
+
+            if (!wallet.publicKey) {
                 throw new Error('Please connect your Phantom wallet first');
+            }
+
+            // Verify the connection is active
+            const isConnected = await this.connection.getAccountInfo(wallet.publicKey);
+            if (!isConnected) {
+                throw new Error('Unable to verify wallet connection');
             }
 
             // Get token accounts for the connected wallet

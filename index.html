@@ -155,11 +155,18 @@
         window.raydiumSdk = window.RadiumSDK;
     </script>
     <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dotenv@16.3.1/lib/main.min.js"></script>
     <script type="module">
         class PoolAgent {
             constructor() {
+                // Get API key from environment variables
+                const apiKey = process.env.HELIUS_API_KEY || '';
+                if (!apiKey) {
+                    console.error('Helius API key not found!');
+                }
+                
                 this.connection = new solanaWeb3.Connection(
-                    'https://rpc.helius.xyz/?api-key=b7b6ec9a-e258-4f73-ba77-429f2e0885f5',
+                    `https://rpc.helius.xyz/?api-key=${apiKey}`,
                     'confirmed'
                 );
             }

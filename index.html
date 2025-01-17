@@ -302,40 +302,6 @@
                 // Invert score (lower is better) and ensure it's between 1-10
                 return Math.max(1, Math.min(10, Math.round(10 - score)));
             }
-
-            async checkTokenHolding(publicKey) {
-                try {
-                    console.log('Checking token holdings for address:', publicKey.toString());
-                    
-                    // Use the same public RPC endpoint
-                    const connection = new solanaWeb3.Connection(
-                        'https://api.mainnet-beta.solana.com',
-                        'confirmed'
-                    );
-                    
-                    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
-                        publicKey,
-                        { programId: new solanaWeb3.PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA') }
-                    );
-
-                    console.log('Found token accounts:', tokenAccounts);
-
-                    const tidalPoolAccount = tokenAccounts.value.find(account => 
-                        account.account.data.parsed.info.mint === TIDAL_POOL_TOKEN
-                    );
-
-                    if (tidalPoolAccount) {
-                        const balance = tidalPoolAccount.account.data.parsed.info.tokenAmount.uiAmount;
-                        console.log('Tidal Pool balance:', balance);
-                        return balance > 0;
-                    }
-                    console.log('No Tidal Pool token account found');
-                    return false;
-                } catch (error) {
-                    console.error('Error checking token balance:', error);
-                    return false;
-                }
-            }
         }
 
         // Then define constants and wallet-related functions

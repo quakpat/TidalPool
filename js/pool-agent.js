@@ -71,7 +71,7 @@ export class PoolAgent {
             console.log(`Found ${mappedPools.length} active CLMM pools with liquidity and volume`);
 
             const highFeePools = mappedPools
-                .filter(pool => pool.fees24h >= 10)  // Lowered threshold for testing
+                .filter(pool => pool.fees24h >= 10)
                 .sort((a, b) => b.fees24h - a.fees24h)
                 .slice(0, 10)
                 .map(pool => {
@@ -81,7 +81,8 @@ export class PoolAgent {
                         fees24h: `$${pool.fees24h.toFixed(2)}`,
                         tvl: `$${pool.liquidity.toFixed(2)}`,
                         apr: `${pool.apr.toFixed(2)}%`,
-                        feeTier: `${pool.feeTier}%`
+                        feeTier: `${pool.feeTier}%`,
+                        url: `https://raydium.io/clmm/create-position/?pool_id=${pool.id}`
                     });
                     
                     const metrics = {
@@ -95,7 +96,8 @@ export class PoolAgent {
                         apr: pool.apr,
                         tokenA: pool.tokenA,
                         tokenB: pool.tokenB,
-                        feeTier: pool.feeTier
+                        feeTier: pool.feeTier,
+                        poolUrl: `https://raydium.io/clmm/create-position/?pool_id=${pool.id}`
                     };
 
                     metrics.profitabilityScore = this.calculateProfitabilityScore(metrics);
@@ -106,7 +108,8 @@ export class PoolAgent {
                         status: "Active",
                         lastUpdated: new Date().toISOString(),
                         metrics,
-                        riskScore: this.calculateRiskScore(metrics)
+                        riskScore: this.calculateRiskScore(metrics),
+                        url: `https://raydium.io/clmm/create-position/?pool_id=${pool.id}`
                     };
                 });
 
@@ -118,7 +121,8 @@ export class PoolAgent {
                     fees24h: `$${highFeePools[0].metrics.fees24h.toFixed(2)}`,
                     tvl: `$${highFeePools[0].metrics.liquidityUSD.toFixed(2)}`,
                     apr: `${highFeePools[0].metrics.apr.toFixed(2)}%`,
-                    feeTier: `${highFeePools[0].metrics.feeTier}%`
+                    feeTier: `${highFeePools[0].metrics.feeTier}%`,
+                    url: highFeePools[0].url
                 });
             }
             return highFeePools;

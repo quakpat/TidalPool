@@ -15,6 +15,15 @@ export class PoolAgent {
         try {
             console.log('Starting CLMM pool fetch...');
             
+            // Fetch token list first
+            console.log('Fetching token list...');
+            const tokenListResponse = await fetch('https://token.jup.ag/all');
+            if (!tokenListResponse.ok) {
+                throw new Error('Failed to fetch token list');
+            }
+            const tokenList = await tokenListResponse.json();
+            const tokenMap = new Map(tokenList.map(token => [token.address, token.symbol]));
+            
             // Fetch CLMM pool data
             console.log('Fetching Raydium CLMM pools...');
             const poolsResponse = await fetch('https://api.raydium.io/v2/ammV3/ammPools');
@@ -37,9 +46,9 @@ export class PoolAgent {
                     const fees24h = parseFloat(pool.day?.volumeFee || 0);
                     const apr = parseFloat(pool.day?.apr || 0);
 
-                    // Get token names
-                    const tokenA = pool.tokenASymbol || pool.tokenA || 'Unknown';
-                    const tokenB = pool.tokenBSymbol || pool.tokenB || 'Unknown';
+                    // Get token names from Jupiter token list
+                    const tokenA = tokenMap.get(pool.mintA) || 'Unknown';
+                    const tokenB = tokenMap.get(pool.mintB) || 'Unknown';
 
                     console.log('Pool stats:', {
                         id: pool.id,

@@ -177,18 +177,31 @@
                         return [];
                     }
 
+                    // Log first few pools to inspect structure
+                    console.log('Sample pools:', data.data.slice(0, 5));
+
                     // Process and sort pools
                     const processedPools = data.data
-                        .filter(pool => 
-                            pool.tvl && 
-                            pool.volume24h && 
-                            pool.fee24h && 
-                            pool.apr24h &&
-                            pool.token0Symbol &&
-                            pool.token1Symbol
-                        )
+                        .filter(pool => {
+                            // Log pool data for debugging
+                            console.log('Checking pool:', {
+                                id: pool.id,
+                                tvl: pool.tvl,
+                                volume: pool.volume24h,
+                                fees: pool.fee24h,
+                                apr: pool.apr24h,
+                                symbols: [pool.token0Symbol, pool.token1Symbol]
+                            });
+                            
+                            return pool.tvl && 
+                                   pool.volume24h && 
+                                   pool.fee24h && 
+                                   pool.apr24h &&
+                                   pool.token0Symbol &&
+                                   pool.token1Symbol;
+                        })
                         .map(pool => {
-                            console.log('Processing pool:', pool);
+                            console.log('Processing qualified pool:', pool);
                             return {
                                 address: pool.id,
                                 metrics: {

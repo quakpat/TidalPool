@@ -2,7 +2,6 @@ export class PoolAgent {
     constructor() {
         this.connection = new solanaWeb3.Connection('https://rpc.helius.xyz/?api-key=b7b6ec9a-e258-4f73-ba77-429f2e0885f5');
     }
-
     async findProfitablePools() {
         try {
             console.log('Starting pool fetch...');
@@ -15,12 +14,21 @@ export class PoolAgent {
             console.log(`Fetched ${raydiumApiData.length} pairs from Raydium API`);
             
             console.log('Fetching on-chain pools...');
-            const pools = await this.connection.getProgramAccounts(programId, {
-                commitment: "confirmed",
-                filters: [
-                    { dataSize: 752 }  // Removed version filter temporarily for testing
-                ]
-            });
+            const pools = await this.connection.getProgramAccounts(
+                programId,
+                {
+                    encoding: 'base64',
+                    commitment: 'confirmed',
+                    filters: [
+                        {
+                            memcmp: {
+                                offset: 0,
+                                bytes: "3"
+                            }
+                        }
+                    ]
+                }
+            );
             
             console.log(`Found ${pools.length} raw pools on-chain`);
 

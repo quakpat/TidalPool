@@ -542,31 +542,33 @@
 
         async function checkTokenHolding(publicKey) {
             try {
-                // Use Quicknode's public RPC endpoint
+                console.log('Checking token holdings for address:', publicKey.toString());
+                
                 const connection = new solanaWeb3.Connection(
                     'https://api.devnet.solana.com',
                     'confirmed'
                 );
                 
-                // Get all token accounts for the connected wallet
                 const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
                     publicKey,
                     { programId: new solanaWeb3.PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA') }
                 );
 
-                // Find if user holds the Tidal Pool token
+                console.log('Found token accounts:', tokenAccounts);
+
                 const tidalPoolAccount = tokenAccounts.value.find(account => 
                     account.account.data.parsed.info.mint === TIDAL_POOL_TOKEN
                 );
 
                 if (tidalPoolAccount) {
                     const balance = tidalPoolAccount.account.data.parsed.info.tokenAmount.uiAmount;
+                    console.log('Tidal Pool balance:', balance);
                     return balance > 0;
                 }
+                console.log('No Tidal Pool token account found');
                 return false;
             } catch (error) {
                 console.error('Error checking token balance:', error);
-                // If there's an error checking the balance, we'll default to false
                 return false;
             }
         }
@@ -575,13 +577,16 @@
             const agentContent = document.getElementById('agent-content');
             const connectPrompt = document.getElementById('agent-connect-prompt');
             
-            if (!walletConnected) {
+            console.log('Updating agent visibility. Wallet connected:', walletConnected);
+            
+            if (!walletConnected || !walletPublicKey) {
                 agentContent.classList.add('hidden');
                 connectPrompt.classList.remove('hidden');
                 return;
             }
 
             const hasTokens = await checkTokenHolding(walletPublicKey);
+            console.log('Has Tidal Pool tokens:', hasTokens);
             
             if (hasTokens) {
                 agentContent.classList.remove('hidden');
@@ -607,6 +612,8 @@
                 const resp = await window.phantom.solana.connect();
                 walletConnected = true;
                 walletPublicKey = new solanaWeb3.PublicKey(resp.publicKey.toString());
+                
+                console.log('Wallet connected:', walletPublicKey.toString());
                 
                 document.getElementById('walletStatus').textContent = 
                     `Connected: ${resp.publicKey.toString().slice(0, 4)}...${resp.publicKey.toString().slice(-4)}`;

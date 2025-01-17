@@ -150,15 +150,15 @@
                                             <div class="font-semibold">${pool.metrics.tokenA}/${pool.metrics.tokenB}</div>
                                             <div>Pool: ${pool.address}</div>
                                             <div class="text-sm text-gray-400 space-y-1">
-                                                <div>Liquidity: $${pool.metrics.liquidityUSD.toLocaleString()}</div>
-                                                <div>24h Volume: $${pool.metrics.volume24h.toLocaleString()}</div>
-                                                <div>24h Fees: $${pool.metrics.fees24h.toLocaleString()}</div>
-                                                <div>APR: ${pool.metrics.apr.toFixed(2)}%</div>
-                                                <div>Price Impact: ${pool.metrics.priceImpact.toFixed(2)}%</div>
-                                                <div>IL Risk: ${pool.metrics.ilRisk}/100</div>
-                                                <div>Activity Score: ${pool.metrics.activityScore.toFixed(0)}/100</div>
-                                                <div class="text-${pool.riskScore > 7 ? 'red' : pool.riskScore > 4 ? 'yellow' : 'green'}-500">
-                                                    Risk Score: ${pool.riskScore}/10
+                                                <div>Liquidity: $${(pool.metrics.liquidityUSD || 0).toLocaleString()}</div>
+                                                <div>24h Volume: $${(pool.metrics.volume24h || 0).toLocaleString()}</div>
+                                                <div>24h Fees: $${(pool.metrics.fees24h || 0).toLocaleString()}</div>
+                                                <div>APR: ${((pool.metrics.apr || 0)).toFixed(2)}%</div>
+                                                <div>Price Impact: ${((pool.metrics.priceImpact || 0)).toFixed(2)}%</div>
+                                                <div>IL Risk: ${Math.round(pool.metrics.ilRisk || 0)}/100</div>
+                                                <div>Activity Score: ${Math.round(pool.metrics.activityScore || 0)}/100</div>
+                                                <div class="text-${(pool.riskScore > 7 ? 'red' : pool.riskScore > 4 ? 'yellow' : 'green')}-500">
+                                                    Risk Score: ${pool.riskScore || 0}/10
                                                 </div>
                                             </div>
                                         </div>

@@ -158,7 +158,10 @@
     <script type="module">
         class PoolAgent {
             constructor() {
-                this.connection = new solanaWeb3.Connection('https://api.mainnet-beta.solana.com');
+                this.connection = new solanaWeb3.Connection(
+                    'https://solana-mainnet.g.alchemy.com/v2/YOUR_API_KEY',
+                    'confirmed'
+                );
             }
 
             async findProfitablePools() {
@@ -537,7 +540,7 @@
             try {
                 // Use a more reliable RPC endpoint
                 const connection = new solanaWeb3.Connection(
-                    'https://solana-mainnet.g.alchemy.com/v2/demo',
+                    'https://solana-mainnet.g.alchemy.com/v2/YOUR_API_KEY',
                     'confirmed'
                 );
                 

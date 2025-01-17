@@ -10,6 +10,38 @@ export class PoolAgent {
             }
         );
         this.tokenMetadata = new Map();
+        this.TIDAL_TOKEN_MINT = 'RBCDN1DniDSEAogeCgmzXCgoxKpv1nofWsmMjTTVzqd';
+        this.authenticated = false;
+    }
+
+    async checkWalletAuth(wallet) {
+        try {
+            if (!wallet || !wallet.publicKey) {
+                throw new Error('Please connect your Phantom wallet first');
+            }
+
+            // Get token accounts for the connected wallet
+            const tokenAccounts = await this.connection.getParsedTokenAccountsByOwner(
+                wallet.publicKey,
+                { programId: new solanaWeb3.PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA') }
+            );
+
+            // Check if wallet holds any Tidal Pool tokens
+            const tidalTokenAccount = tokenAccounts.value.find(account => 
+                account.account.data.parsed.info.mint === this.TIDAL_TOKEN_MINT
+            );
+
+            if (!tidalTokenAccount || tidalTokenAccount.account.data.parsed.info.tokenAmount.uiAmount <= 0) {
+                throw new Error('You need to hold Tidal Pool tokens to access this feature');
+            }
+
+            this.authenticated = true;
+            return true;
+        } catch (error) {
+            console.error('Authentication failed:', error);
+            this.authenticated = false;
+            throw error;
+        }
     }
 
     async loadTokenMetadata() {
@@ -34,145 +66,151 @@ export class PoolAgent {
         }
     }
 
-    async findProfitablePools() {
+    async findProfitablePools(wallet) {
         try {
-            // Load token metadata first and wait for it to complete
-            await this.loadTokenMetadata();
-            
-            console.log('Token metadata loaded, starting pool fetch...');
-            
-            // Fetch CLMM pool data
-            console.log('Fetching Raydium CLMM pools...');
-            const poolsResponse = await fetch('https://api.raydium.io/v2/ammV3/ammPools');
-            
-            if (!poolsResponse.ok) {
-                throw new Error(`Pools API response error: ${poolsResponse.status}`);
+            // Check authentication first
+            if (!this.authenticated) {
+                await this.checkWalletAuth(wallet);
             }
 
-            const poolsData = await poolsResponse.json();
+            // Continue with existing pool fetching logic only if authenticated
+            if (this.authenticated) {
+                await this.loadTokenMetadata();
+                
+                console.log('Token metadata loaded, starting pool fetch...');
+                
+                // Fetch CLMM pool data
+                console.log('Fetching Raydium CLMM pools...');
+                const poolsResponse = await fetch('https://api.raydium.io/v2/ammV3/ammPools');
+                
+                if (!poolsResponse.ok) {
+                    throw new Error(`Pools API response error: ${poolsResponse.status}`);
+                }
 
-            console.log('Sample pool data:', poolsData.data[0]);
+                const poolsData = await poolsResponse.json();
 
-            console.log(`Fetched ${poolsData?.data?.length || 0} CLMM pools`);
+                console.log('Sample pool data:', poolsData.data[0]);
 
-            // Process pools and filter for high TVL
-            const mappedPools = (poolsData?.data || [])
-                .map(pool => {
-                    // Extract data from day stats
-                    const volume24h = parseFloat(pool.day?.volume || 0);
-                    const tvl = parseFloat(pool.tvl || 0);
-                    const feeRate = (pool.ammConfig?.tradeFeeRate || 0) / 1000000;
-                    const fees24h = parseFloat(pool.day?.volumeFee || 0);
-                    const apr = parseFloat(pool.day?.apr || 0);
+                console.log(`Fetched ${poolsData?.data?.length || 0} CLMM pools`);
 
-                    // Get token metadata and log it
-                    const metadataA = this.tokenMetadata.get(pool.mintA);
-                    const metadataB = this.tokenMetadata.get(pool.mintB);
-                    
-                    console.log('Token Metadata:', {
-                        mintA: pool.mintA,
-                        mintB: pool.mintB,
-                        metadataA,
-                        metadataB
+                // Process pools and filter for high TVL
+                const mappedPools = (poolsData?.data || [])
+                    .map(pool => {
+                        // Extract data from day stats
+                        const volume24h = parseFloat(pool.day?.volume || 0);
+                        const tvl = parseFloat(pool.tvl || 0);
+                        const feeRate = (pool.ammConfig?.tradeFeeRate || 0) / 1000000;
+                        const fees24h = parseFloat(pool.day?.volumeFee || 0);
+                        const apr = parseFloat(pool.day?.apr || 0);
+
+                        // Get token metadata and log it
+                        const metadataA = this.tokenMetadata.get(pool.mintA);
+                        const metadataB = this.tokenMetadata.get(pool.mintB);
+                        
+                        console.log('Token Metadata:', {
+                            mintA: pool.mintA,
+                            mintB: pool.mintB,
+                            metadataA,
+                            metadataB
+                        });
+
+                        // Get token symbols from metadata
+                        const tokenA = metadataA?.symbol || pool.mintA.slice(0, 4) + '...' + pool.mintA.slice(-4);
+                        const tokenB = metadataB?.symbol || pool.mintB.slice(0, 4) + '...' + pool.mintB.slice(-4);
+
+                        console.log('Resolved Tokens:', {
+                            tokenA,
+                            tokenB
+                        });
+
+                        return {
+                            id: pool.id,
+                            liquidity: tvl,
+                            volume24h,
+                            fees24h,
+                            tokenA,
+                            tokenB,
+                            priceChange24h: (pool.day?.priceMax - pool.day?.priceMin) / pool.day?.priceMin * 100,
+                            mintA: pool.mintA,
+                            mintB: pool.mintB,
+                            tickSpacing: pool.tickSpacing,
+                            feeTier: (pool.ammConfig?.tradeFeeRate || 0) / 10000,
+                            apr
+                        };
+                    })
+                    .filter(pool => pool.liquidity > 0 && pool.volume24h > 0);
+
+                console.log(`Found ${mappedPools.length} active CLMM pools with liquidity and volume`);
+
+                const highFeePools = mappedPools
+                    .filter(pool => pool.fees24h >= 10)
+                    .sort((a, b) => b.fees24h - a.fees24h)
+                    .slice(0, 10)
+                    .map(pool => {
+                        const poolUrl = `https://raydium.io/clmm/create-position/?pool_id=${pool.id}`;
+                        
+                        // Log the tokens to verify what we're getting
+                        console.log('Processing pool tokens:', {
+                            tokenA: pool.tokenA,
+                            tokenB: pool.tokenB
+                        });
+                        
+                        const metrics = {
+                            liquidityUSD: pool.liquidity,
+                            volume24h: pool.volume24h,
+                            fees24h: pool.fees24h,
+                            priceImpact: this.calculatePriceImpact(pool.liquidity, 1000),
+                            ilRisk: this.calculateILRisk(pool.priceChange24h),
+                            activityScore: Math.min(100, (pool.volume24h / (pool.liquidity || 1)) * 100),
+                            profitabilityScore: 0,
+                            apr: pool.apr,
+                            tokenA: pool.tokenA,
+                            tokenB: pool.tokenB,
+                            feeTier: pool.feeTier,
+                            poolUrl: poolUrl
+                        };
+
+                        metrics.profitabilityScore = this.calculateProfitabilityScore(metrics);
+
+                        // Create the pool object with the correct token pair
+                        const poolInfo = {
+                            address: pool.id,
+                            type: "Raydium CLMM",
+                            status: "Active",
+                            lastUpdated: new Date().toISOString(),
+                            metrics,
+                            riskScore: this.calculateRiskScore(metrics),
+                            url: poolUrl
+                        };
+
+                        // Log the high-fee pool with correct token symbols
+                        console.log('High-fee CLMM pool found:', {
+                            id: pool.id,
+                            pair: `${pool.tokenA}/${pool.tokenB}`,
+                            fees24h: `$${pool.fees24h.toFixed(2)}`,
+                            tvl: `$${pool.liquidity.toFixed(2)}`,
+                            apr: `${pool.apr.toFixed(2)}%`,
+                            feeTier: `${pool.feeTier}%`,
+                            url: poolUrl
+                        });
+
+                        return poolInfo;
                     });
 
-                    // Get token symbols from metadata
-                    const tokenA = metadataA?.symbol || pool.mintA.slice(0, 4) + '...' + pool.mintA.slice(-4);
-                    const tokenB = metadataB?.symbol || pool.mintB.slice(0, 4) + '...' + pool.mintB.slice(-4);
-
-                    console.log('Resolved Tokens:', {
-                        tokenA,
-                        tokenB
+                console.log(`Found ${highFeePools.length} high-fee CLMM pools`);
+                if (highFeePools.length > 0) {
+                    console.log('Top CLMM pool:', {
+                        address: highFeePools[0].address,
+                        tokens: `${highFeePools[0].metrics.tokenA}/${highFeePools[0].metrics.tokenB}`,
+                        fees24h: `$${highFeePools[0].metrics.fees24h.toFixed(2)}`,
+                        tvl: `$${highFeePools[0].metrics.liquidityUSD.toFixed(2)}`,
+                        apr: `${highFeePools[0].metrics.apr.toFixed(2)}%`,
+                        feeTier: `${highFeePools[0].metrics.feeTier}%`,
+                        url: highFeePools[0].url
                     });
-
-                    return {
-                        id: pool.id,
-                        liquidity: tvl,
-                        volume24h,
-                        fees24h,
-                        tokenA,
-                        tokenB,
-                        priceChange24h: (pool.day?.priceMax - pool.day?.priceMin) / pool.day?.priceMin * 100,
-                        mintA: pool.mintA,
-                        mintB: pool.mintB,
-                        tickSpacing: pool.tickSpacing,
-                        feeTier: (pool.ammConfig?.tradeFeeRate || 0) / 10000,
-                        apr
-                    };
-                })
-                .filter(pool => pool.liquidity > 0 && pool.volume24h > 0);
-
-            console.log(`Found ${mappedPools.length} active CLMM pools with liquidity and volume`);
-
-            const highFeePools = mappedPools
-                .filter(pool => pool.fees24h >= 10)
-                .sort((a, b) => b.fees24h - a.fees24h)
-                .slice(0, 10)
-                .map(pool => {
-                    const poolUrl = `https://raydium.io/clmm/create-position/?pool_id=${pool.id}`;
-                    
-                    // Log the tokens to verify what we're getting
-                    console.log('Processing pool tokens:', {
-                        tokenA: pool.tokenA,
-                        tokenB: pool.tokenB
-                    });
-                    
-                    const metrics = {
-                        liquidityUSD: pool.liquidity,
-                        volume24h: pool.volume24h,
-                        fees24h: pool.fees24h,
-                        priceImpact: this.calculatePriceImpact(pool.liquidity, 1000),
-                        ilRisk: this.calculateILRisk(pool.priceChange24h),
-                        activityScore: Math.min(100, (pool.volume24h / (pool.liquidity || 1)) * 100),
-                        profitabilityScore: 0,
-                        apr: pool.apr,
-                        tokenA: pool.tokenA,
-                        tokenB: pool.tokenB,
-                        feeTier: pool.feeTier,
-                        poolUrl: poolUrl
-                    };
-
-                    metrics.profitabilityScore = this.calculateProfitabilityScore(metrics);
-
-                    // Create the pool object with the correct token pair
-                    const poolInfo = {
-                        address: pool.id,
-                        type: "Raydium CLMM",
-                        status: "Active",
-                        lastUpdated: new Date().toISOString(),
-                        metrics,
-                        riskScore: this.calculateRiskScore(metrics),
-                        url: poolUrl
-                    };
-
-                    // Log the high-fee pool with correct token symbols
-                    console.log('High-fee CLMM pool found:', {
-                        id: pool.id,
-                        pair: `${pool.tokenA}/${pool.tokenB}`,
-                        fees24h: `$${pool.fees24h.toFixed(2)}`,
-                        tvl: `$${pool.liquidity.toFixed(2)}`,
-                        apr: `${pool.apr.toFixed(2)}%`,
-                        feeTier: `${pool.feeTier}%`,
-                        url: poolUrl
-                    });
-
-                    return poolInfo;
-                });
-
-            console.log(`Found ${highFeePools.length} high-fee CLMM pools`);
-            if (highFeePools.length > 0) {
-                console.log('Top CLMM pool:', {
-                    address: highFeePools[0].address,
-                    tokens: `${highFeePools[0].metrics.tokenA}/${highFeePools[0].metrics.tokenB}`,
-                    fees24h: `$${highFeePools[0].metrics.fees24h.toFixed(2)}`,
-                    tvl: `$${highFeePools[0].metrics.liquidityUSD.toFixed(2)}`,
-                    apr: `${highFeePools[0].metrics.apr.toFixed(2)}%`,
-                    feeTier: `${highFeePools[0].metrics.feeTier}%`,
-                    url: highFeePools[0].url
-                });
+                }
+                return highFeePools;
             }
-            return highFeePools;
-
         } catch (error) {
             console.error('Error in findProfitablePools:', error);
             throw error;

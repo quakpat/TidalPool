@@ -16,44 +16,43 @@ export class PoolAgent {
             console.log('Starting pool fetch...');
             
             // Fetch pool data from v3 API
-            console.log('Fetching Raydium CLMM pools...');
-            const poolsResponse = await fetch('https://api.raydium.io/v2/main/info');
+            console.log('Fetching Raydium pools...');
+            const poolsResponse = await fetch('https://api.raydium.io/v2/main/pairs');
             
             if (!poolsResponse.ok) {
                 throw new Error(`Pools API response error: ${poolsResponse.status}`);
             }
 
             const poolsData = await poolsResponse.json();
-            console.log('API Response:', poolsData);
-            
-            if (!poolsData || !poolsData.pools) {
+            console.log(`Fetched ${poolsData?.length || 0} pools`);
+            console.log('Sample pool data:', poolsData?.[0]);
+
+            if (!Array.isArray(poolsData)) {
                 throw new Error('Invalid API response structure');
             }
-
-            const pools = Object.values(poolsData.pools);
-            console.log(`Fetched ${pools.length} pools`);
-            console.log('Sample pool data:', pools[0]);
 
             console.log('Processing pools...');
             
             // Process pools and filter for high TVL
-            const mappedPools = pools
+            const mappedPools = poolsData
                 .map(pool => {
                     // Extract relevant data
                     const liquidity = parseFloat(pool.liquidity || 0);
                     const volume24h = parseFloat(pool.volume24h || 0);
                     const fees24h = volume24h * 0.0025; // 0.25% fee
+                    const apr = parseFloat(pool.apr24h || 0);
 
                     return {
-                        id: pool.ammId || pool.id,
+                        id: pool.ammId,
                         liquidity,
                         volume24h,
                         fees24h,
-                        tokenA: pool.token0Symbol || pool.tokenASymbol || 'Unknown',
-                        tokenB: pool.token1Symbol || pool.tokenBSymbol || 'Unknown',
+                        apr,
+                        tokenA: pool.name?.split('/')[0] || 'Unknown',
+                        tokenB: pool.name?.split('/')[1] || 'Unknown',
                         priceChange24h: pool.priceChange24h,
-                        mintA: pool.token0 || pool.mintA,
-                        mintB: pool.token1 || pool.mintB
+                        mintA: pool.baseMint,
+                        mintB: pool.quoteMint
                     };
                 })
                 .filter(pool => pool.liquidity > 0); // Filter out pools with no liquidity
@@ -75,7 +74,7 @@ export class PoolAgent {
                         ilRisk: this.calculateILRisk(pool.priceChange24h),
                         activityScore: Math.min(100, (pool.volume24h / (pool.liquidity || 1)) * 100),
                         profitabilityScore: 0,
-                        apr: (pool.fees24h * 365 * 100) / (pool.liquidity || 1),
+                        apr: pool.apr,
                         tokenA: pool.tokenA,
                         tokenB: pool.tokenB
                     };
@@ -98,7 +97,8 @@ export class PoolAgent {
                     address: highFeePools[0].address,
                     tokens: `${highFeePools[0].metrics.tokenA}/${highFeePools[0].metrics.tokenB}`,
                     fees24h: highFeePools[0].metrics.fees24h.toFixed(2),
-                    tvl: highFeePools[0].metrics.liquidityUSD.toFixed(2)
+                    tvl: highFeePools[0].metrics.liquidityUSD.toFixed(2),
+                    apr: highFeePools[0].metrics.apr.toFixed(2) + '%'
                 });
             }
             return highFeePools;

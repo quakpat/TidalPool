@@ -19,11 +19,11 @@ export class PoolAgent {
             const jupiterTokens = await jupiterResponse.json();
             
             // Load Raydium token list
-            const raydiumResponse = await fetch('https://api.raydium.io/v2/sdk/token/raydium.mainnet.json');
+            const raydiumResponse = await fetch('https://api.raydium.io/v2/main/token-list');
             const raydiumData = await raydiumResponse.json();
             
             console.log('Jupiter tokens:', jupiterTokens.length);
-            console.log('Raydium tokens:', raydiumData.length);
+            console.log('Raydium tokens:', raydiumData.official.length + raydiumData.unOfficial.length);
             
             // Combine both token lists
             jupiterTokens.forEach(token => {
@@ -33,20 +33,28 @@ export class PoolAgent {
                 });
             });
             
-            // Check if raydiumData is an array before processing
-            if (Array.isArray(raydiumData)) {
-                raydiumData.forEach(token => {
-                    if (!this.tokenMetadata.has(token.address)) {
-                        this.tokenMetadata.set(token.address, {
-                            symbol: token.symbol,
-                            name: token.name
-                        });
-                    }
-                });
-            }
+            // Add official Raydium tokens
+            raydiumData.official.forEach(token => {
+                if (!this.tokenMetadata.has(token.mint)) {
+                    this.tokenMetadata.set(token.mint, {
+                        symbol: token.symbol,
+                        name: token.name
+                    });
+                }
+            });
+
+            // Add unofficial Raydium tokens
+            raydiumData.unOfficial.forEach(token => {
+                if (!this.tokenMetadata.has(token.mint)) {
+                    this.tokenMetadata.set(token.mint, {
+                        symbol: token.symbol,
+                        name: token.name
+                    });
+                }
+            });
             
             console.log('Sample Jupiter token:', jupiterTokens[0]);
-            console.log('Sample Raydium token:', raydiumData[0]);
+            console.log('Sample Raydium token:', raydiumData.official[0]);
             console.log('Loaded metadata for', this.tokenMetadata.size, 'tokens');
 
             // Add a small delay to ensure metadata is loaded

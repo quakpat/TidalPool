@@ -83,6 +83,8 @@ export class PoolAgent {
                     .filter(pool => pool.liquidity > 10000)
                     .slice(0, 10)
                     .map(apiData => {
+                        console.log('Processing pool data:', apiData); // Debug log
+                        
                         const metrics = {
                             liquidityUSD: apiData.liquidity || 0,
                             volume24h: apiData.volume24h || 0,
@@ -90,10 +92,10 @@ export class PoolAgent {
                             priceImpact: this.calculatePriceImpact(apiData.liquidity || 0, 1000),
                             ilRisk: this.calculateILRisk(apiData.price24hChange),
                             activityScore: Math.min(100, ((apiData.volume24h || 0) / (apiData.liquidity || 1)) * 100),
-                            profitabilityScore: 0, // Will be calculated below
+                            profitabilityScore: 0,
                             apr: ((apiData.volume24h || 0) * 0.0025 * 365 * 100) / (apiData.liquidity || 1),
-                            tokenA: apiData.token0Symbol || 'Unknown',
-                            tokenB: apiData.token1Symbol || 'Unknown'
+                            tokenA: apiData.name.split('-')[0] || 'Unknown', // Use name split
+                            tokenB: apiData.name.split('-')[1] || 'Unknown'  // Use name split
                         };
 
                         // Calculate profitability score
@@ -109,6 +111,7 @@ export class PoolAgent {
                         };
                     });
 
+                console.log('Sample pool data:', poolData[0]); // Debug log
                 console.log(`Found ${poolData.length} pools from API fallback`);
                 return poolData;
             }

@@ -12,20 +12,20 @@ export class PoolAgent {
     async findProfitablePools() {
         try {
             console.log('Starting pool fetch...');
-            const programId = new solanaWeb3.PublicKey("675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8");
+            const programId = new solanaWeb3.PublicKey("CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK");
             
             // Log Raydium API fetch
             console.log('Fetching Raydium API data...');
-            const raydiumResponse = await fetch('https://api.raydium.io/v2/main/pairs');
+            const raydiumResponse = await fetch('https://api.raydium.io/v2/ammV3/ammPools');
             const raydiumApiData = await raydiumResponse.json();
-            console.log(`Fetched ${raydiumApiData.length} pairs from Raydium API`);
+            console.log(`Fetched ${raydiumApiData.length} CLMM pairs from Raydium API`);
             
             console.log('Fetching on-chain pools...');
             
-            // Simplified config
+            // Simplified config for CLMM pools
             const config = {
                 filters: [{
-                    dataSize: 752
+                    dataSize: 1432 // CLMM pool size
                 }]
             };
 
@@ -35,16 +35,16 @@ export class PoolAgent {
                     config
                 );
                 
-                console.log(`Found ${pools.length} raw pools on-chain`);
+                console.log(`Found ${pools.length} raw CLMM pools on-chain`);
 
                 if (pools.length === 0) {
-                    console.log('No pools found. Trying alternative approach...');
+                    console.log('No CLMM pools found. Trying alternative approach...');
                     return [];
                 }
 
                 const poolData = await Promise.all(pools.map(async (pool) => {
                     const address = pool.pubkey.toBase58();
-                    const apiData = raydiumApiData.find(p => p.ammId === address);
+                    const apiData = raydiumApiData.find(p => p.id === address);
                     
                     if (!apiData) {
                         return null;
@@ -58,7 +58,7 @@ export class PoolAgent {
 
                     return {
                         address,
-                        type: "Raydium V3",
+                        type: "Raydium CLMM",
                         status: "Active",
                         lastUpdated: new Date().toISOString(),
                         metrics,
@@ -71,7 +71,7 @@ export class PoolAgent {
                     .filter(pool => pool !== null && pool.metrics?.liquidityUSD > 10000)
                     .sort((a, b) => b.metrics.profitabilityScore - a.metrics.profitabilityScore);
 
-                console.log(`Found ${validPools.length} valid pools after filtering`);
+                console.log(`Found ${validPools.length} valid CLMM pools after filtering`);
                 return validPools;
 
             } catch (rpcError) {
@@ -80,23 +80,28 @@ export class PoolAgent {
                 // Fallback to using Raydium API data only
                 console.log('Falling back to Raydium API data...');
                 const poolData = raydiumApiData
-                    .filter(pool => pool.liquidity > 10000)
-                    .slice(0, 10)
+                    .filter(pool => {
+                        const fees24h = (pool.volume24h || 0) * 0.0025; // 0.25% fee
+                        return fees24h >= 10000; // Only pools with $10k+ daily fees
+                    })
+                    .sort((a, b) => (b.volume24h * 0.0025) - (a.volume24h * 0.0025)) // Sort by fees
+                    .slice(0, 10) // Top 10 pools
                     .map(apiData => {
-                        console.log('Processing pool data:', apiData);
+                        console.log('Processing CLMM pool data:', apiData);
                         
                         // Fix token name display
                         const [tokenA, tokenB] = (apiData.name || '').split('/').slice(0, 2);
+                        const fees24h = (apiData.volume24h || 0) * 0.0025;
                         
                         const metrics = {
                             liquidityUSD: apiData.liquidity || 0,
                             volume24h: apiData.volume24h || 0,
-                            fees24h: (apiData.volume24h || 0) * 0.0025,
+                            fees24h: fees24h,
                             priceImpact: this.calculatePriceImpact(apiData.liquidity || 0, 1000),
                             ilRisk: this.calculateILRisk(apiData.price24hChange),
                             activityScore: Math.min(100, ((apiData.volume24h || 0) / (apiData.liquidity || 1)) * 100),
                             profitabilityScore: 0,
-                            apr: ((apiData.volume24h || 0) * 0.0025 * 365 * 100) / (apiData.liquidity || 1),
+                            apr: (fees24h * 365 * 100) / (apiData.liquidity || 1),
                             tokenA: tokenA || 'Unknown',
                             tokenB: tokenB || 'Unknown'
                         };
@@ -105,8 +110,8 @@ export class PoolAgent {
                         metrics.profitabilityScore = this.calculateProfitabilityScore(metrics);
 
                         return {
-                            address: apiData.ammId,
-                            type: "Raydium V3",
+                            address: apiData.id,
+                            type: "Raydium CLMM",
                             status: "Active",
                             lastUpdated: new Date().toISOString(),
                             metrics,
@@ -114,8 +119,8 @@ export class PoolAgent {
                         };
                     });
 
-                console.log('Sample pool data:', poolData[0]);
-                console.log(`Found ${poolData.length} pools from API fallback`);
+                console.log('Sample CLMM pool data:', poolData[0]);
+                console.log(`Found ${poolData.length} high-volume CLMM pools`);
                 return poolData;
             }
 

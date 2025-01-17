@@ -156,11 +156,10 @@
     </script>
     <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dotenv@16.3.1/lib/main.min.js"></script>
-    <script type="module">
+    <script>
+        // Define PoolAgent class first
         class PoolAgent {
             constructor() {
-                // Remove dependency on process.env
-                // Instead use a public RPC endpoint or your own endpoint
                 this.connection = new solanaWeb3.Connection(
                     'https://api.mainnet-beta.solana.com',
                     'confirmed'
@@ -339,75 +338,112 @@
             }
         }
 
-        window.addEventListener('DOMContentLoaded', async () => {
-            const poolResultsElement = document.getElementById('pool-results');
-            
-            poolResultsElement.innerHTML = `
-                <div class="bg-[#243038] rounded-xl p-4 mt-4">
-                    <p class="text-white">Loading pools... Please wait.</p>
-                </div>
-            `;
+        // Then define constants and wallet-related functions
+        const TIDAL_POOL_TOKEN = 'RBCDN1DniDSEAogeCgmzXCgoxKpv1nofWsmMjTTVzqd';
+        let walletConnected = false;
+        let walletPublicKey = null;
 
+        async function checkTokenHolding(publicKey) {
             try {
-                const agent = new PoolAgent();
-                const pools = await agent.findProfitablePools();
+                console.log('Checking token holdings for address:', publicKey.toString());
                 
-                if (pools && pools.length > 0) {
-                    poolResultsElement.innerHTML = `
-                        <div class="bg-[#243038] rounded-xl p-4 mt-4">
-                            <h4 class="text-[#0a88cf] font-semibold mb-2">Top Profitable Pools (${pools.length} total):</h4>
-                            <ul class="space-y-4 max-w-full">
-                                ${pools.slice(0, 5).map(pool => `
-                                    <li class="text-white flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                                        <div class="min-w-0 break-all">
-                                            <div class="font-semibold">${pool.metrics.tokenATicker || pool.metrics.tokenA}/${pool.metrics.tokenBTicker || pool.metrics.tokenB}</div>
-                                            <div>Pool: ${pool.address}</div>
-                                            <div class="text-sm text-gray-400 space-y-1">
-                                                <div>Liquidity: $${(pool.metrics.liquidityUSD || 0).toLocaleString()}</div>
-                                                <div>24h Volume: $${(pool.metrics.volume24h || 0).toLocaleString()}</div>
-                                                <div>24h Fees: $${(pool.metrics.fees24h || 0).toLocaleString()}</div>
-                                                <div>APR: ${((pool.metrics.apr || 0)).toFixed(2)}%</div>
-                                                <div>Price Impact: ${((pool.metrics.priceImpact || 0)).toFixed(2)}%</div>
-                                                <div>IL Risk: ${Math.round(pool.metrics.ilRisk || 0)}/100</div>
-                                                <div>Activity Score: ${Math.round(pool.metrics.activityScore || 0)}/100</div>
-                                                <div class="text-${(pool.riskScore > 7 ? 'red' : pool.riskScore > 4 ? 'yellow' : 'green')}-500">
-                                                    Risk Score: ${pool.riskScore || 0}/10
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="flex flex-col gap-2">
-                                            <a href="https://raydium.io/clmm/create-position/?pool_id=${pool.address}" 
-                                               target="_blank" 
-                                               class="px-4 py-2 bg-[#0a88cf] rounded-lg hover:bg-opacity-80 transition-all text-sm text-center">
-                                                View Pool
-                                            </a>
-                                            <a href="https://solscan.io/account/${pool.address}" 
-                                               target="_blank" 
-                                               class="px-4 py-2 bg-[#243038] border border-[#0a88cf] rounded-lg hover:bg-opacity-80 transition-all text-sm text-center">
-                                                View on Solscan
-                                            </a>
-                                        </div>
-                                    </li>
-                                `).join('')}
-                            </ul>
-                        </div>
-                    `;
-                } else {
-                    poolResultsElement.innerHTML = `
-                        <div class="bg-[#243038] rounded-xl p-4 mt-4">
-                            <p class="text-white">No pools found at the moment.</p>
-                        </div>
-                    `;
+                // Use the same public RPC endpoint
+                const connection = new solanaWeb3.Connection(
+                    'https://api.mainnet-beta.solana.com',
+                    'confirmed'
+                );
+                
+                const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
+                    publicKey,
+                    { programId: new solanaWeb3.PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA') }
+                );
+
+                console.log('Found token accounts:', tokenAccounts);
+
+                const tidalPoolAccount = tokenAccounts.value.find(account => 
+                    account.account.data.parsed.info.mint === TIDAL_POOL_TOKEN
+                );
+
+                if (tidalPoolAccount) {
+                    const balance = tidalPoolAccount.account.data.parsed.info.tokenAmount.uiAmount;
+                    console.log('Tidal Pool balance:', balance);
+                    return balance > 0;
                 }
+                console.log('No Tidal Pool token account found');
+                return false;
             } catch (error) {
-                console.error('Error:', error);
-                poolResultsElement.innerHTML = `
-                    <div class="bg-[#243038] rounded-xl p-4 mt-4">
-                        <p class="text-red-500">Error loading pools: ${error.message || 'Unknown error occurred'}</p>
-                        <p class="text-sm text-gray-400 mt-2">Please try again later.</p>
-                    </div>
-                `;
+                console.error('Error checking token balance:', error);
+                return false;
             }
+        }
+
+        async function updateAgentVisibility() {
+            const agentContent = document.getElementById('agent-content');
+            const connectPrompt = document.getElementById('agent-connect-prompt');
+            
+            console.log('Updating agent visibility. Wallet connected:', walletConnected);
+            
+            if (!walletConnected || !walletPublicKey) {
+                agentContent.classList.add('hidden');
+                connectPrompt.classList.remove('hidden');
+                return;
+            }
+
+            const hasTokens = await checkTokenHolding(walletPublicKey);
+            console.log('Has Tidal Pool tokens:', hasTokens);
+            
+            if (hasTokens) {
+                agentContent.classList.remove('hidden');
+                connectPrompt.classList.add('hidden');
+            } else {
+                agentContent.classList.add('hidden');
+                connectPrompt.classList.remove('hidden');
+                document.getElementById('connectForAgent').textContent = 'Get $TP Tokens';
+                document.getElementById('connectForAgent').onclick = () => {
+                    window.open('https://raydium.io/swap/?outputMint=RBCDN1DniDSEAogeCgmzXCgoxKpv1nofWsmMjTTVzqd&inputMint=sol', '_blank');
+                };
+            }
+        }
+
+        // Add event listeners after all definitions
+        window.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('connectWallet').addEventListener('click', async () => {
+                try {
+                    if (!window.phantom?.solana?.isPhantom) {
+                        alert('Please install Phantom wallet!');
+                        return;
+                    }
+
+                    const resp = await window.phantom.solana.connect();
+                    walletConnected = true;
+                    walletPublicKey = new solanaWeb3.PublicKey(resp.publicKey.toString());
+                    
+                    console.log('Wallet connected:', walletPublicKey.toString());
+                    
+                    document.getElementById('walletStatus').textContent = 
+                        `Connected: ${resp.publicKey.toString().slice(0, 4)}...${resp.publicKey.toString().slice(-4)}`;
+                    
+                    // Create pool agent instance
+                    const poolAgent = new PoolAgent();
+                    
+                    // Check token holding and update UI
+                    await updateAgentVisibility();
+                } catch (err) {
+                    console.error('Wallet connection error:', err);
+                    document.getElementById('walletStatus').textContent = 'Connection failed';
+                    walletConnected = false;
+                    walletPublicKey = null;
+                }
+            });
+
+            document.getElementById('connectForAgent').addEventListener('click', async () => {
+                if (!walletConnected) {
+                    document.getElementById('connectWallet').click();
+                }
+            });
+
+            // Initial check
+            updateAgentVisibility();
         });
     </script>
 </head>
@@ -688,113 +724,5 @@
         <button id="connectWallet" class="wallet-button">Connect Phantom Wallet</button>
         <div id="walletStatus" class="wallet-status"></div>
     </div>
-
-    <script>
-        const TIDAL_POOL_TOKEN = 'RBCDN1DniDSEAogeCgmzXCgoxKpv1nofWsmMjTTVzqd';
-        let walletConnected = false;
-        let walletPublicKey = null;
-
-        async function checkTokenHolding(publicKey) {
-            try {
-                console.log('Checking token holdings for address:', publicKey.toString());
-                
-                // Use the same public RPC endpoint
-                const connection = new solanaWeb3.Connection(
-                    'https://api.mainnet-beta.solana.com',
-                    'confirmed'
-                );
-                
-                const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
-                    publicKey,
-                    { programId: new solanaWeb3.PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA') }
-                );
-
-                console.log('Found token accounts:', tokenAccounts);
-
-                const tidalPoolAccount = tokenAccounts.value.find(account => 
-                    account.account.data.parsed.info.mint === TIDAL_POOL_TOKEN
-                );
-
-                if (tidalPoolAccount) {
-                    const balance = tidalPoolAccount.account.data.parsed.info.tokenAmount.uiAmount;
-                    console.log('Tidal Pool balance:', balance);
-                    return balance > 0;
-                }
-                console.log('No Tidal Pool token account found');
-                return false;
-            } catch (error) {
-                console.error('Error checking token balance:', error);
-                return false;
-            }
-        }
-
-        async function updateAgentVisibility() {
-            const agentContent = document.getElementById('agent-content');
-            const connectPrompt = document.getElementById('agent-connect-prompt');
-            
-            console.log('Updating agent visibility. Wallet connected:', walletConnected);
-            
-            if (!walletConnected || !walletPublicKey) {
-                agentContent.classList.add('hidden');
-                connectPrompt.classList.remove('hidden');
-                return;
-            }
-
-            const hasTokens = await checkTokenHolding(walletPublicKey);
-            console.log('Has Tidal Pool tokens:', hasTokens);
-            
-            if (hasTokens) {
-                agentContent.classList.remove('hidden');
-                connectPrompt.classList.add('hidden');
-            } else {
-                agentContent.classList.add('hidden');
-                connectPrompt.classList.remove('hidden');
-                document.getElementById('connectForAgent').textContent = 'Get $TP Tokens';
-                document.getElementById('connectForAgent').onclick = () => {
-                    window.open('https://raydium.io/swap/?outputMint=RBCDN1DniDSEAogeCgmzXCgoxKpv1nofWsmMjTTVzqd&inputMint=sol', '_blank');
-                };
-            }
-        }
-
-        // Update the wallet connection handler
-        document.getElementById('connectWallet').addEventListener('click', async () => {
-            try {
-                if (!window.phantom?.solana?.isPhantom) {
-                    alert('Please install Phantom wallet!');
-                    return;
-                }
-
-                const resp = await window.phantom.solana.connect();
-                walletConnected = true;
-                walletPublicKey = new solanaWeb3.PublicKey(resp.publicKey.toString());
-                
-                console.log('Wallet connected:', walletPublicKey.toString());
-                
-                document.getElementById('walletStatus').textContent = 
-                    `Connected: ${resp.publicKey.toString().slice(0, 4)}...${resp.publicKey.toString().slice(-4)}`;
-                
-                // Create pool agent instance with environment variables
-                const poolAgent = new PoolAgent();
-                
-                // Check token holding and update UI
-                await updateAgentVisibility();
-            } catch (err) {
-                console.error('Wallet connection error:', err);
-                document.getElementById('walletStatus').textContent = 'Connection failed';
-                walletConnected = false;
-                walletPublicKey = null;
-            }
-        });
-
-        // Add handler for the agent section connect button
-        document.getElementById('connectForAgent').addEventListener('click', async () => {
-            if (!walletConnected) {
-                document.getElementById('connectWallet').click();
-            }
-        });
-
-        // Initial check on page load
-        window.addEventListener('DOMContentLoaded', updateAgentVisibility);
-    </script>
 </body>
 </html>

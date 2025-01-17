@@ -14,14 +14,29 @@ export class PoolAgent {
 
     async loadTokenMetadata() {
         try {
-            const response = await fetch('https://token.jup.ag/all');
-            const tokens = await response.json();
+            // Load Jupiter token list
+            const jupiterResponse = await fetch('https://token.jup.ag/all');
+            const jupiterTokens = await jupiterResponse.json();
             
-            tokens.forEach(token => {
+            // Load Raydium token list
+            const raydiumResponse = await fetch('https://api.raydium.io/v2/sdk/token/raydium.mainnet.json');
+            const raydiumTokens = await raydiumResponse.json();
+            
+            // Combine both token lists
+            jupiterTokens.forEach(token => {
                 this.tokenMetadata.set(token.address, {
                     symbol: token.symbol,
                     name: token.name
                 });
+            });
+            
+            raydiumTokens.tokens.forEach(token => {
+                if (!this.tokenMetadata.has(token.mint)) {
+                    this.tokenMetadata.set(token.mint, {
+                        symbol: token.symbol,
+                        name: token.name
+                    });
+                }
             });
             
             console.log('Loaded metadata for', this.tokenMetadata.size, 'tokens');

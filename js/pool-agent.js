@@ -14,9 +14,9 @@ export class PoolAgent {
             console.log('Starting pool fetch...');
             const programId = new solanaWeb3.PublicKey("CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK");
             
-            // Updated API endpoint for CLMM pools with correct path
+            // Updated to v3 API endpoint
             console.log('Fetching Raydium CLMM API data...');
-            const raydiumResponse = await fetch('https://api.raydium.io/clmm/v1/pools');
+            const raydiumResponse = await fetch('https://api-v3.raydium.io/clmm/pools');
             const raydiumApiData = await raydiumResponse.json();
             console.log(`Fetched ${raydiumApiData?.data?.length || 0} CLMM pairs from Raydium API`);
             

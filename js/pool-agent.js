@@ -107,14 +107,10 @@ export class PoolAgent {
                 .map(pool => {
                     const poolUrl = `https://raydium.io/clmm/create-position/?pool_id=${pool.id}`;
                     
-                    console.log('High-fee CLMM pool found:', {
-                        id: pool.id,
-                        pair: `${pool.tokenA}/${pool.tokenB}`,
-                        fees24h: `$${pool.fees24h.toFixed(2)}`,
-                        tvl: `$${pool.liquidity.toFixed(2)}`,
-                        apr: `${pool.apr.toFixed(2)}%`,
-                        feeTier: `${pool.feeTier}%`,
-                        url: poolUrl
+                    // Log the tokens to verify what we're getting
+                    console.log('Processing pool tokens:', {
+                        tokenA: pool.tokenA,
+                        tokenB: pool.tokenB
                     });
                     
                     const metrics = {
@@ -134,7 +130,8 @@ export class PoolAgent {
 
                     metrics.profitabilityScore = this.calculateProfitabilityScore(metrics);
 
-                    return {
+                    // Create the pool object with the correct token pair
+                    const poolInfo = {
                         address: pool.id,
                         type: "Raydium CLMM",
                         status: "Active",
@@ -143,6 +140,19 @@ export class PoolAgent {
                         riskScore: this.calculateRiskScore(metrics),
                         url: poolUrl
                     };
+
+                    // Log the high-fee pool with correct token symbols
+                    console.log('High-fee CLMM pool found:', {
+                        id: pool.id,
+                        pair: `${pool.tokenA}/${pool.tokenB}`,
+                        fees24h: `$${pool.fees24h.toFixed(2)}`,
+                        tvl: `$${pool.liquidity.toFixed(2)}`,
+                        apr: `${pool.apr.toFixed(2)}%`,
+                        feeTier: `${pool.feeTier}%`,
+                        url: poolUrl
+                    });
+
+                    return poolInfo;
                 });
 
             console.log(`Found ${highFeePools.length} high-fee CLMM pools`);

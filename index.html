@@ -172,13 +172,8 @@
                     const data = await response.json();
                     console.log('Raw pool data:', data);
 
-                    if (!data.data || !Array.isArray(data.data)) {
-                        console.error('Unexpected data format:', data);
-                        return [];
-                    }
-
-                    // Log first few pools to inspect structure
-                    console.log('Sample pools:', data.data.slice(0, 5));
+                    // Log a sample pool to see full structure
+                    console.log('Sample pool:', data.data[0]);
 
                     // Process and sort pools
                     const processedPools = data.data
@@ -186,42 +181,42 @@
                             // Log pool data for debugging
                             console.log('Checking pool:', {
                                 id: pool.id,
-                                tvl: pool.tvl,
-                                volume: pool.volume24h,
-                                fees: pool.fee24h,
-                                apr: pool.apr24h,
-                                symbols: [pool.token0Symbol, pool.token1Symbol]
+                                liquidity: pool.liquidity,
+                                volume24h: pool.volume24hQuote,
+                                fee: pool.fee,
+                                tokenA: pool.tokenA,
+                                tokenB: pool.tokenB
                             });
                             
-                            return pool.tvl && 
-                                   pool.volume24h && 
-                                   pool.fee24h && 
-                                   pool.apr24h &&
-                                   pool.token0Symbol &&
-                                   pool.token1Symbol;
+                            return pool.liquidity && 
+                                   pool.volume24hQuote && 
+                                   pool.fee &&
+                                   pool.tokenA &&
+                                   pool.tokenB;
                         })
                         .map(pool => {
                             console.log('Processing qualified pool:', pool);
+                            const apr = this.calculateApr(pool.volume24hQuote, pool.liquidity, pool.fee);
                             return {
                                 address: pool.id,
                                 metrics: {
-                                    tokenATicker: pool.token0Symbol || 'Unknown',
-                                    tokenBTicker: pool.token1Symbol || 'Unknown',
-                                    liquidityUSD: parseFloat(pool.tvl) || 0,
-                                    volume24h: parseFloat(pool.volume24h) || 0,
-                                    fees24h: parseFloat(pool.fee24h) || 0,
-                                    apr: parseFloat(pool.apr24h) || 0,
-                                    priceImpact: parseFloat(pool.priceImpact) || 0,
+                                    tokenATicker: pool.tokenA?.symbol || 'Unknown',
+                                    tokenBTicker: pool.tokenB?.symbol || 'Unknown',
+                                    liquidityUSD: parseFloat(pool.liquidity) || 0,
+                                    volume24h: parseFloat(pool.volume24hQuote) || 0,
+                                    fees24h: (parseFloat(pool.volume24hQuote) || 0) * (parseFloat(pool.fee) / 100),
+                                    apr: apr,
+                                    priceImpact: 0, // Not available in API
                                     ilRisk: this.calculateILRisk(pool.price7d, pool.price24h),
                                     activityScore: this.calculateActivityScore(
-                                        parseFloat(pool.volume24h) || 0,
-                                        parseFloat(pool.tvl) || 0
+                                        parseFloat(pool.volume24hQuote) || 0,
+                                        parseFloat(pool.liquidity) || 0
                                     )
                                 },
                                 riskScore: this.calculateRiskScore({
-                                    tvl: parseFloat(pool.tvl) || 0,
-                                    volume24h: parseFloat(pool.volume24h) || 0,
-                                    price24h: parseFloat(pool.price24h) || 0
+                                    tvl: parseFloat(pool.liquidity) || 0,
+                                    volume24h: parseFloat(pool.volume24hQuote) || 0,
+                                    price24h: pool.price24h
                                 })
                             };
                         });
@@ -249,6 +244,14 @@
                     console.error('Error in findProfitablePools:', error);
                     throw error;
                 }
+            }
+
+            calculateApr(volume24h, liquidity, fee) {
+                if (!volume24h || !liquidity || !fee) return 0;
+                // Calculate yearly fees based on 24h volume
+                const yearlyFees = (volume24h * 365 * (fee / 100));
+                // Calculate APR as yearly fees / liquidity * 100
+                return (yearlyFees / liquidity) * 100;
             }
 
             calculateILRisk(price7d, price24h) {
@@ -738,3 +741,4 @@
     </script>
 </body>
 </html>
+

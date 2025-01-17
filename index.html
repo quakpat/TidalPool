@@ -172,51 +172,55 @@
                     const data = await response.json();
                     console.log('Raw pool data:', data);
 
-                    // Log a sample pool to see full structure
-                    console.log('Sample pool:', data.data[0]);
-
                     // Process and sort pools
                     const processedPools = data.data
                         .filter(pool => {
                             // Log pool data for debugging
                             console.log('Checking pool:', {
                                 id: pool.id,
-                                liquidity: pool.liquidity,
-                                volume24h: pool.volume24hQuote,
-                                fee: pool.fee,
-                                tokenA: pool.tokenA,
-                                tokenB: pool.tokenB
+                                tvl: pool.tvl,
+                                volume: pool.day?.volume,
+                                fee: pool.ammConfig?.tradeFeeRate,
+                                mintA: pool.mintA,
+                                mintB: pool.mintB
                             });
                             
-                            return pool.liquidity && 
-                                   pool.volume24hQuote && 
-                                   pool.fee &&
-                                   pool.tokenA &&
-                                   pool.tokenB;
+                            return pool.tvl > 0 && 
+                                   pool.day?.volume > 0 && 
+                                   pool.ammConfig?.tradeFeeRate &&
+                                   pool.mintA &&
+                                   pool.mintB;
                         })
                         .map(pool => {
                             console.log('Processing qualified pool:', pool);
-                            const apr = this.calculateApr(pool.volume24hQuote, pool.liquidity, pool.fee);
+                            const apr = this.calculateApr(
+                                pool.day.volume,
+                                pool.tvl,
+                                pool.ammConfig.tradeFeeRate
+                            );
                             return {
                                 address: pool.id,
                                 metrics: {
-                                    tokenATicker: pool.tokenA?.symbol || 'Unknown',
-                                    tokenBTicker: pool.tokenB?.symbol || 'Unknown',
-                                    liquidityUSD: parseFloat(pool.liquidity) || 0,
-                                    volume24h: parseFloat(pool.volume24hQuote) || 0,
-                                    fees24h: (parseFloat(pool.volume24hQuote) || 0) * (parseFloat(pool.fee) / 100),
-                                    apr: apr,
-                                    priceImpact: 0, // Not available in API
-                                    ilRisk: this.calculateILRisk(pool.price7d, pool.price24h),
+                                    tokenATicker: this.getTokenSymbol(pool.mintA),
+                                    tokenBTicker: this.getTokenSymbol(pool.mintB),
+                                    liquidityUSD: parseFloat(pool.tvl) || 0,
+                                    volume24h: parseFloat(pool.day.volume) || 0,
+                                    fees24h: parseFloat(pool.day.volumeFee) || 0,
+                                    apr: pool.day.feeApr || apr,
+                                    priceImpact: 0,
+                                    ilRisk: this.calculateILRisk(
+                                        pool.week?.price,
+                                        pool.day?.price
+                                    ),
                                     activityScore: this.calculateActivityScore(
-                                        parseFloat(pool.volume24hQuote) || 0,
-                                        parseFloat(pool.liquidity) || 0
+                                        parseFloat(pool.day.volume) || 0,
+                                        parseFloat(pool.tvl) || 0
                                     )
                                 },
                                 riskScore: this.calculateRiskScore({
-                                    tvl: parseFloat(pool.liquidity) || 0,
-                                    volume24h: parseFloat(pool.volume24hQuote) || 0,
-                                    price24h: pool.price24h
+                                    tvl: parseFloat(pool.tvl) || 0,
+                                    volume24h: parseFloat(pool.day.volume) || 0,
+                                    price: pool.price
                                 })
                             };
                         });
@@ -246,12 +250,24 @@
                 }
             }
 
-            calculateApr(volume24h, liquidity, fee) {
-                if (!volume24h || !liquidity || !fee) return 0;
+            calculateApr(volume24h, tvl, feeRate) {
+                if (!volume24h || !tvl || !feeRate) return 0;
+                // Convert fee rate from basis points to percentage (2500 = 0.25%)
+                const feePercentage = feeRate / 10000;
                 // Calculate yearly fees based on 24h volume
-                const yearlyFees = (volume24h * 365 * (fee / 100));
-                // Calculate APR as yearly fees / liquidity * 100
-                return (yearlyFees / liquidity) * 100;
+                const yearlyFees = (volume24h * 365 * feePercentage);
+                // Calculate APR as yearly fees / tvl * 100
+                return (yearlyFees / tvl) * 100;
+            }
+
+            getTokenSymbol(mint) {
+                // Common token addresses mapping
+                const tokenMap = {
+                    'So11111111111111111111111111111111111111112': 'SOL',
+                    'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v': 'USDC',
+                    // Add more token mappings as needed
+                };
+                return tokenMap[mint] || mint.slice(0, 4);
             }
 
             calculateILRisk(price7d, price24h) {
@@ -741,4 +757,3 @@
     </script>
 </body>
 </html>
-

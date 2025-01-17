@@ -122,6 +122,11 @@
             object-position: center;
         }
     </style>
+    <script src="https://unpkg.com/@raydium-io/raydium-sdk/dist/index.iife.js"></script>
+    <script>
+        // Make SDK available globally
+        window.raydiumSdk = window.RadiumSDK;
+    </script>
     <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
     <script type="module">
         import { PoolAgent } from './js/pool-agent.js';

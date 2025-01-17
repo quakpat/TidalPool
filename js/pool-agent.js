@@ -26,65 +26,63 @@ export class PoolAgent {
             const poolsData = await poolsResponse.json();
 
             console.log(`Fetched ${poolsData?.data?.length || 0} CLMM pools`);
-            console.log('Sample CLMM pool data:', JSON.stringify(poolsData?.data?.[0], null, 2));
 
             // Process pools and filter for high TVL
             const mappedPools = (poolsData?.data || [])
                 .map(pool => {
-                    // Log raw pool data for debugging
-                    console.log('Processing pool:', pool.id);
-                    console.log('Volume24h:', pool.volume24h);
-                    console.log('TVL:', pool.tvl);
-                    console.log('Fee rate:', pool.ammConfig?.tradeFeeRate);
-                    console.log('Tokens:', pool.tokenASymbol, '/', pool.tokenBSymbol);
-
-                    // Extract data directly from pool
-                    const volume24h = parseFloat(pool.volume24h || 0);
+                    // Extract data from day stats
+                    const volume24h = parseFloat(pool.day?.volume || 0);
                     const tvl = parseFloat(pool.tvl || 0);
                     const feeRate = (pool.ammConfig?.tradeFeeRate || 0) / 1000000; // Convert from parts per million to decimal
-                    const fees24h = volume24h * feeRate;
+                    const fees24h = parseFloat(pool.day?.volumeFee || 0);
+                    const apr = parseFloat(pool.day?.apr || 0);
 
-                    if (fees24h > 10000) {
-                        console.log('High fee pool found:', {
-                            id: pool.id,
-                            volume24h,
-                            tvl,
-                            feeRate: feeRate * 100 + '%',
-                            fees24h,
-                            pair: `${pool.tokenASymbol || pool.tokenA}/${pool.tokenBSymbol || pool.tokenB}`
-                        });
-                    }
+                    // Get token addresses from mints
+                    const tokenA = pool.mintA?.slice(0, 6) + '...' + pool.mintA?.slice(-4);
+                    const tokenB = pool.mintB?.slice(0, 6) + '...' + pool.mintB?.slice(-4);
+
+                    console.log('Pool stats:', {
+                        id: pool.id,
+                        volume24h,
+                        tvl,
+                        feeRate: (feeRate * 100).toFixed(3) + '%',
+                        fees24h,
+                        apr: apr.toFixed(2) + '%',
+                        pair: `${tokenA}/${tokenB}`
+                    });
 
                     return {
                         id: pool.id,
                         liquidity: tvl,
                         volume24h,
                         fees24h,
-                        tokenA: pool.tokenASymbol || pool.tokenA || 'Unknown',
-                        tokenB: pool.tokenBSymbol || pool.tokenB || 'Unknown',
-                        priceChange24h: pool.price24hChange,
+                        tokenA,
+                        tokenB,
+                        priceChange24h: (pool.day?.priceMax - pool.day?.priceMin) / pool.day?.priceMin * 100,
                         mintA: pool.mintA,
                         mintB: pool.mintB,
                         tickSpacing: pool.tickSpacing,
-                        feeTier: (pool.ammConfig?.tradeFeeRate || 0) / 10000 // Convert to percentage
+                        feeTier: (pool.ammConfig?.tradeFeeRate || 0) / 10000, // Convert to percentage
+                        apr
                     };
                 })
-                .filter(pool => pool.liquidity > 0 && pool.volume24h > 0); // Filter pools with no liquidity or volume
+                .filter(pool => pool.liquidity > 0 && pool.volume24h > 0);
 
             console.log(`Found ${mappedPools.length} active CLMM pools with liquidity and volume`);
 
             const highFeePools = mappedPools
-                .filter(pool => pool.fees24h >= 10000)
+                .filter(pool => pool.fees24h >= 10)  // Lowered threshold for testing
                 .sort((a, b) => b.fees24h - a.fees24h)
                 .slice(0, 10)
                 .map(pool => {
-                    console.log('Processing high-fee CLMM pool:', 
-                        `\nID: ${pool.id}`,
-                        `\nPair: ${pool.tokenA}/${pool.tokenB}`,
-                        `\nFees: $${pool.fees24h.toFixed(2)}`, 
-                        `\nTVL: $${pool.liquidity.toFixed(2)}`,
-                        `\nFee Tier: ${pool.feeTier}%`
-                    );
+                    console.log('High-fee CLMM pool found:', {
+                        id: pool.id,
+                        pair: `${pool.tokenA}/${pool.tokenB}`,
+                        fees24h: `$${pool.fees24h.toFixed(2)}`,
+                        tvl: `$${pool.liquidity.toFixed(2)}`,
+                        apr: `${pool.apr.toFixed(2)}%`,
+                        feeTier: `${pool.feeTier}%`
+                    });
                     
                     const metrics = {
                         liquidityUSD: pool.liquidity,
@@ -94,7 +92,7 @@ export class PoolAgent {
                         ilRisk: this.calculateILRisk(pool.priceChange24h),
                         activityScore: Math.min(100, (pool.volume24h / (pool.liquidity || 1)) * 100),
                         profitabilityScore: 0,
-                        apr: (pool.fees24h * 365 * 100) / (pool.liquidity || 1),
+                        apr: pool.apr,
                         tokenA: pool.tokenA,
                         tokenB: pool.tokenB,
                         feeTier: pool.feeTier

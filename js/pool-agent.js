@@ -1,8 +1,13 @@
 export class PoolAgent {
     constructor() {
-        this.connection = new solanaWeb3.Connection('https://rpc.helius.xyz/?api-key=b7b6ec9a-e258-4f73-ba77-429f2e0885f5');
+        this.connection = new solanaWeb3.Connection(
+            'https://rpc.helius.xyz/?api-key=b7b6ec9a-e258-4f73-ba77-429f2e0885f5',
+            {
+                commitment: 'confirmed',
+                wsEndpoint: 'wss://rpc.helius.xyz/?api-key=YOUR_API_KEY'
+            }
+        );
     }
-    
 
     async findProfitablePools() {
         try {
@@ -16,65 +21,92 @@ export class PoolAgent {
             console.log(`Fetched ${raydiumApiData.length} pairs from Raydium API`);
             
             console.log('Fetching on-chain pools...');
+            
+            // Simplified config
             const config = {
-                commitment: 'confirmed',
-                encoding: 'jsonParsed',
-                filters: [
-                    {
-                        dataSize: 752 // Raydium pool size
-                    }
-                ]
+                filters: [{
+                    dataSize: 752
+                }]
             };
 
-            const pools = await this.connection.getProgramAccounts(
-                programId,
-                config
-            );
-            
-            console.log(`Found ${pools.length} raw pools on-chain`);
+            try {
+                const pools = await this.connection.getProgramAccounts(
+                    programId,
+                    config
+                );
+                
+                console.log(`Found ${pools.length} raw pools on-chain`);
 
-            if (pools.length === 0) {
-                console.log('No pools found from RPC. Possible issues:');
-                console.log('- RPC rate limiting');
-                console.log('- Incorrect program ID');
-                console.log('- Filter issues');
-                return [];
+                if (pools.length === 0) {
+                    console.log('No pools found. Trying alternative approach...');
+                    return [];
+                }
+
+                const poolData = await Promise.all(pools.map(async (pool) => {
+                    const address = pool.pubkey.toBase58();
+                    const apiData = raydiumApiData.find(p => p.ammId === address);
+                    
+                    if (!apiData) {
+                        return null;
+                    }
+
+                    const metrics = await this.calculatePoolMetrics(pool, apiData);
+                    
+                    if (!metrics) {
+                        return null;
+                    }
+
+                    return {
+                        address,
+                        type: "Raydium V3",
+                        status: "Active",
+                        lastUpdated: new Date().toISOString(),
+                        metrics,
+                        riskScore: this.calculateRiskScore(metrics)
+                    };
+                }));
+
+                // Filter out null values and apply liquidity filter
+                const validPools = poolData
+                    .filter(pool => pool !== null && pool.metrics?.liquidityUSD > 10000)
+                    .sort((a, b) => b.metrics.profitabilityScore - a.metrics.profitabilityScore);
+
+                console.log(`Found ${validPools.length} valid pools after filtering`);
+                return validPools;
+
+            } catch (rpcError) {
+                console.error('RPC Error:', rpcError);
+                
+                // Fallback to using Raydium API data only
+                console.log('Falling back to Raydium API data...');
+                const poolData = raydiumApiData
+                    .filter(pool => pool.liquidity > 10000)
+                    .slice(0, 10)
+                    .map(apiData => {
+                        const metrics = {
+                            liquidityUSD: apiData.liquidity,
+                            volume24h: apiData.volume24h,
+                            fees24h: apiData.volume24h * 0.0025,
+                            priceImpact: this.calculatePriceImpact(apiData.liquidity, 1000),
+                            ilRisk: this.calculateILRisk(apiData.price24hChange),
+                            activityScore: Math.min(100, (apiData.volume24h / apiData.liquidity) * 100),
+                            tokenA: apiData.token0Symbol,
+                            tokenB: apiData.token1Symbol
+                        };
+
+                        return {
+                            address: apiData.ammId,
+                            type: "Raydium V3",
+                            status: "Active",
+                            lastUpdated: new Date().toISOString(),
+                            metrics,
+                            riskScore: this.calculateRiskScore(metrics)
+                        };
+                    });
+
+                console.log(`Found ${poolData.length} pools from API fallback`);
+                return poolData;
             }
-
-            const poolData = await Promise.all(pools.map(async (pool) => {
-                const address = pool.pubkey.toBase58();
-                console.log(`Processing pool: ${address}`);
-                const apiData = raydiumApiData.find(p => p.ammId === address);
-                
-                if (!apiData) {
-                    console.log(`No API data found for pool: ${address}`);
-                    return null;
-                }
-
-                const metrics = await this.calculatePoolMetrics(pool, apiData);
-                
-                if (!metrics) {
-                    console.log(`Failed to calculate metrics for pool: ${address}`);
-                    return null;
-                }
-
-                return {
-                    address,
-                    type: "Raydium V3",
-                    status: "Active",
-                    lastUpdated: new Date().toISOString(),
-                    metrics,
-                    riskScore: this.calculateRiskScore(metrics)
-                };
-            }));
-
-            // Filter out null values and apply liquidity filter
-            const validPools = poolData
-                .filter(pool => pool !== null && pool.metrics?.liquidityUSD > 10000)
-                .sort((a, b) => b.metrics.profitabilityScore - a.metrics.profitabilityScore);
-
-            console.log(`Found ${validPools.length} valid pools after filtering`);
-            return validPools;
 
         } catch (error) {
             console.error('Error in findProfitablePools:', error);

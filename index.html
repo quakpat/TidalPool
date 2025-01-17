@@ -166,23 +166,23 @@
 
             async findProfitablePools() {
                 try {
-                    // Fetch Raydium pools data
-                    const response = await fetch('https://api.raydium.io/v2/main/pairs');
+                    // Fetch Raydium CLMM pools data
+                    const response = await fetch('https://api.raydium.io/v2/ammV3/ammPools');
                     const data = await response.json();
 
                     // Process and sort pools
-                    const processedPools = data.map(pool => ({
-                        address: pool.ammId,
+                    const processedPools = data.data.map(pool => ({
+                        address: pool.id,
                         metrics: {
-                            tokenATicker: pool.name.split('-')[0],
-                            tokenBTicker: pool.name.split('-')[1],
-                            liquidityUSD: pool.liquidity,
+                            tokenATicker: pool.token0Symbol,
+                            tokenBTicker: pool.token1Symbol,
+                            liquidityUSD: pool.tvl,
                             volume24h: pool.volume24h,
-                            fees24h: pool.volume24h * 0.003, // Assuming 0.3% fee
+                            fees24h: pool.fee24h,
                             apr: pool.apr24h,
                             priceImpact: pool.priceImpact || 0,
                             ilRisk: this.calculateILRisk(pool.price7d, pool.price24h),
-                            activityScore: this.calculateActivityScore(pool.volume24h, pool.liquidity)
+                            activityScore: this.calculateActivityScore(pool.volume24h, pool.tvl)
                         },
                         riskScore: this.calculateRiskScore(pool)
                     }));
@@ -220,7 +220,7 @@
                 if (!pool) return 5;
                 
                 // Factors to consider
-                const liquidityFactor = Math.min(pool.liquidity / 1000000, 1); // Normalize to 1M
+                const liquidityFactor = Math.min(pool.tvl / 1000000, 1); // Normalize to 1M
                 const volumeFactor = Math.min(pool.volume24h / 100000, 1); // Normalize to 100k
                 const priceFactor = pool.price24h ? Math.min(Math.abs(1 - pool.price24h), 1) : 0.5;
                 

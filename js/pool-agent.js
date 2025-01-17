@@ -25,21 +25,32 @@ export class PoolAgent {
 
             const poolsData = await poolsResponse.json();
 
+            console.log('Sample pool data:', poolsData.data[0]);
+
             console.log(`Fetched ${poolsData?.data?.length || 0} CLMM pools`);
 
             // Process pools and filter for high TVL
             const mappedPools = (poolsData?.data || [])
                 .map(pool => {
+                    // Log individual pool data to see available properties
+                    console.log('Raw pool data:', {
+                        token0Symbol: pool.token0Symbol,
+                        token1Symbol: pool.token1Symbol,
+                        token0: pool.token0,
+                        token1: pool.token1,
+                        fullPool: pool
+                    });
+
                     // Extract data from day stats
                     const volume24h = parseFloat(pool.day?.volume || 0);
                     const tvl = parseFloat(pool.tvl || 0);
-                    const feeRate = (pool.ammConfig?.tradeFeeRate || 0) / 1000000; // Convert from parts per million to decimal
+                    const feeRate = (pool.ammConfig?.tradeFeeRate || 0) / 1000000;
                     const fees24h = parseFloat(pool.day?.volumeFee || 0);
                     const apr = parseFloat(pool.day?.apr || 0);
 
                     // Get token symbols from the correct properties
-                    const tokenA = pool.token0Symbol || 'Unknown';
-                    const tokenB = pool.token1Symbol || 'Unknown';
+                    const tokenA = pool.token0 || pool.token0Symbol || 'Unknown';
+                    const tokenB = pool.token1 || pool.token1Symbol || 'Unknown';
 
                     console.log('Pool stats:', {
                         id: pool.id,

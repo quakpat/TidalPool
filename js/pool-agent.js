@@ -56,10 +56,10 @@ export class PoolAgent {
                 .map(pool => {
                     // Log individual pool data to see available properties
                     console.log('Raw pool data:', {
-                        token0Symbol: pool.token0Symbol,
-                        token1Symbol: pool.token1Symbol,
-                        token0: pool.token0,
-                        token1: pool.token1,
+                        mintA: pool.mintA,
+                        mintB: pool.mintB,
+                        tokenMetadataA: this.tokenMetadata.get(pool.mintA),
+                        tokenMetadataB: this.tokenMetadata.get(pool.mintB),
                         fullPool: pool
                     });
 

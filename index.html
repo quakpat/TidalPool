@@ -307,6 +307,44 @@
                 // Invert score (lower is better) and ensure it's between 1-10
                 return Math.max(1, Math.min(10, Math.round(10 - score)));
             }
+
+            async checkTokenHolding(publicKey) {
+                try {
+                    console.log('Checking token holdings for address:', publicKey.toString());
+                    
+                    const apiKey = process.env.HELIUS_API_KEY || '';
+                    if (!apiKey) {
+                        console.error('Helius API key not found!');
+                        return false;
+                    }
+                    const connection = new solanaWeb3.Connection(
+                        `https://rpc.helius.xyz/?api-key=${apiKey}`,
+                        'confirmed'
+                    );
+                    
+                    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
+                        publicKey,
+                        { programId: new solanaWeb3.PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA') }
+                    );
+
+                    console.log('Found token accounts:', tokenAccounts);
+
+                    const tidalPoolAccount = tokenAccounts.value.find(account => 
+                        account.account.data.parsed.info.mint === TIDAL_POOL_TOKEN
+                    );
+
+                    if (tidalPoolAccount) {
+                        const balance = tidalPoolAccount.account.data.parsed.info.tokenAmount.uiAmount;
+                        console.log('Tidal Pool balance:', balance);
+                        return balance > 0;
+                    }
+                    console.log('No Tidal Pool token account found');
+                    return false;
+                } catch (error) {
+                    console.error('Error checking token balance:', error);
+                    return false;
+                }
+            }
         }
 
         window.addEventListener('DOMContentLoaded', async () => {
@@ -668,8 +706,13 @@
             try {
                 console.log('Checking token holdings for address:', publicKey.toString());
                 
+                const apiKey = process.env.HELIUS_API_KEY || '';
+                if (!apiKey) {
+                    console.error('Helius API key not found!');
+                    return false;
+                }
                 const connection = new solanaWeb3.Connection(
-                    'https://rpc.helius.xyz/?api-key=b7b6ec9a-e258-4f73-ba77-429f2e0885f5',
+                    `https://rpc.helius.xyz/?api-key=${apiKey}`,
                     'confirmed'
                 );
                 
@@ -741,6 +784,9 @@
                 
                 document.getElementById('walletStatus').textContent = 
                     `Connected: ${resp.publicKey.toString().slice(0, 4)}...${resp.publicKey.toString().slice(-4)}`;
+                
+                // Create pool agent instance with environment variables
+                const poolAgent = new PoolAgent();
                 
                 // Check token holding and update UI
                 await updateAgentVisibility();

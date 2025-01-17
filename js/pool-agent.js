@@ -5,28 +5,50 @@ export class PoolAgent {
 
     async findProfitablePools() {
         try {
-            console.log('Fetching pools...');
+            console.log('Starting pool fetch...');
             const programId = new solanaWeb3.PublicKey("675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8");
             
-            // Fetch Raydium API data for price and volume info
-            const raydiumApiData = await fetch('https://api.raydium.io/v2/main/pairs').then(res => res.json());
+            // Log Raydium API fetch
+            console.log('Fetching Raydium API data...');
+            const raydiumResponse = await fetch('https://api.raydium.io/v2/main/pairs');
+            const raydiumApiData = await raydiumResponse.json();
+            console.log(`Fetched ${raydiumApiData.length} pairs from Raydium API`);
             
+            console.log('Fetching on-chain pools...');
             const pools = await this.connection.getProgramAccounts(programId, {
                 commitment: "confirmed",
                 filters: [
-                    { dataSize: 752 },
-                    { memcmp: { offset: 0, bytes: "3" } }
-                ],
-                encoding: "base64"
+                    { dataSize: 752 }  // Removed version filter temporarily for testing
+                ]
             });
+            
+            console.log(`Found ${pools.length} raw pools on-chain`);
+
+            if (pools.length === 0) {
+                console.log('No pools found from RPC. Possible issues:');
+                console.log('- RPC rate limiting');
+                console.log('- Incorrect program ID');
+                console.log('- Filter issues');
+                return [];
+            }
 
             const poolData = await Promise.all(pools.map(async (pool) => {
                 const address = pool.pubkey.toBase58();
+                console.log(`Processing pool: ${address}`);
                 const apiData = raydiumApiData.find(p => p.ammId === address);
                 
-                // Calculate metrics
+                if (!apiData) {
+                    console.log(`No API data found for pool: ${address}`);
+                    return null;
+                }
+
                 const metrics = await this.calculatePoolMetrics(pool, apiData);
                 
+                if (!metrics) {
+                    console.log(`Failed to calculate metrics for pool: ${address}`);
+                    return null;
+                }
+
                 return {
                     address,
                     type: "Raydium V3",
@@ -37,10 +59,13 @@ export class PoolAgent {
                 };
             }));
 
-            // Sort pools by profitability score
-            return poolData
-                .filter(pool => pool.metrics.liquidityUSD > 10000) // Min $10k liquidity
+            // Filter out null values and apply liquidity filter
+            const validPools = poolData
+                .filter(pool => pool !== null && pool.metrics?.liquidityUSD > 10000)
                 .sort((a, b) => b.metrics.profitabilityScore - a.metrics.profitabilityScore);
+
+            console.log(`Found ${validPools.length} valid pools after filtering`);
+            return validPools;
 
         } catch (error) {
             console.error('Error in findProfitablePools:', error);

@@ -49,8 +49,8 @@ export class PoolAgent {
                     const apr = parseFloat(pool.day?.apr || 0);
 
                     // Get token symbols from the correct properties
-                    const tokenA = pool.token0 || pool.token0Symbol || 'Unknown';
-                    const tokenB = pool.token1 || pool.token1Symbol || 'Unknown';
+                    const tokenA = pool.state?.mintA?.symbol || pool.state?.token0?.symbol || 'Unknown';
+                    const tokenB = pool.state?.mintB?.symbol || pool.state?.token1?.symbol || 'Unknown';
 
                     console.log('Pool stats:', {
                         id: pool.id,

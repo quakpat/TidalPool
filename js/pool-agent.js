@@ -75,6 +75,8 @@ export class PoolAgent {
                 .sort((a, b) => b.fees24h - a.fees24h)
                 .slice(0, 10)
                 .map(pool => {
+                    const poolUrl = `https://raydium.io/clmm/create-position/?id=${pool.id}`;
+                    
                     console.log('High-fee CLMM pool found:', {
                         id: pool.id,
                         pair: `${pool.tokenA}/${pool.tokenB}`,
@@ -82,7 +84,7 @@ export class PoolAgent {
                         tvl: `$${pool.liquidity.toFixed(2)}`,
                         apr: `${pool.apr.toFixed(2)}%`,
                         feeTier: `${pool.feeTier}%`,
-                        url: `https://raydium.io/clmm/create-position/?pool_id=${pool.id}`
+                        url: poolUrl
                     });
                     
                     const metrics = {
@@ -97,7 +99,7 @@ export class PoolAgent {
                         tokenA: pool.tokenA,
                         tokenB: pool.tokenB,
                         feeTier: pool.feeTier,
-                        poolUrl: `https://raydium.io/clmm/create-position/?pool_id=${pool.id}`
+                        poolUrl: poolUrl
                     };
 
                     metrics.profitabilityScore = this.calculateProfitabilityScore(metrics);
@@ -109,7 +111,7 @@ export class PoolAgent {
                         lastUpdated: new Date().toISOString(),
                         metrics,
                         riskScore: this.calculateRiskScore(metrics),
-                        url: `https://raydium.io/clmm/create-position/?pool_id=${pool.id}`
+                        url: poolUrl
                     };
                 });
 

@@ -9,10 +9,32 @@ export class PoolAgent {
                 wsEndpoint: 'wss://rpc.helius.xyz/?api-key=b7b6ec9a-e258-4f73-ba77-429f2e0885f5'
             }
         );
+        this.tokenMetadata = new Map();
+    }
+
+    async loadTokenMetadata() {
+        try {
+            const response = await fetch('https://token.jup.ag/all');
+            const tokens = await response.json();
+            
+            tokens.forEach(token => {
+                this.tokenMetadata.set(token.address, {
+                    symbol: token.symbol,
+                    name: token.name
+                });
+            });
+            
+            console.log('Loaded metadata for', this.tokenMetadata.size, 'tokens');
+        } catch (error) {
+            console.error('Error loading token metadata:', error);
+        }
     }
 
     async findProfitablePools() {
         try {
+            // Load token metadata first
+            await this.loadTokenMetadata();
+            
             console.log('Starting CLMM pool fetch...');
             
             // Fetch CLMM pool data
@@ -48,9 +70,9 @@ export class PoolAgent {
                     const fees24h = parseFloat(pool.day?.volumeFee || 0);
                     const apr = parseFloat(pool.day?.apr || 0);
 
-                    // Get token symbols from the correct properties
-                    const tokenA = pool.state?.mintA?.symbol || pool.state?.token0?.symbol || 'Unknown';
-                    const tokenB = pool.state?.mintB?.symbol || pool.state?.token1?.symbol || 'Unknown';
+                    // Get token symbols from metadata
+                    const tokenA = this.tokenMetadata.get(pool.mintA)?.symbol || pool.mintA.slice(0, 4) + '...' + pool.mintA.slice(-4);
+                    const tokenB = this.tokenMetadata.get(pool.mintB)?.symbol || pool.mintB.slice(0, 4) + '...' + pool.mintB.slice(-4);
 
                     console.log('Pool stats:', {
                         id: pool.id,

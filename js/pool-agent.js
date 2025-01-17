@@ -13,58 +13,70 @@ export class PoolAgent {
 
     async findProfitablePools() {
         try {
-            console.log('Starting pool fetch...');
+            console.log('Starting CLMM pool fetch...');
             
-            // Fetch pool data from v3 API
-            console.log('Fetching Raydium pools...');
-            const poolsResponse = await fetch('https://api.raydium.io/v2/main/pairs');
+            // Fetch CLMM pool data
+            console.log('Fetching Raydium CLMM pools...');
+            const poolsResponse = await fetch('https://api.raydium.io/v2/ammV3/ammPools');
             
             if (!poolsResponse.ok) {
                 throw new Error(`Pools API response error: ${poolsResponse.status}`);
             }
 
             const poolsData = await poolsResponse.json();
-            console.log(`Fetched ${poolsData?.length || 0} pools`);
-            console.log('Sample pool data:', poolsData?.[0]);
-
-            if (!Array.isArray(poolsData)) {
-                throw new Error('Invalid API response structure');
+            
+            // Get the stats for volume data
+            console.log('Fetching pool statistics...');
+            const statsResponse = await fetch('https://api.raydium.io/v2/ammV3/positionData');
+            
+            if (!statsResponse.ok) {
+                throw new Error(`Stats API response error: ${statsResponse.status}`);
             }
 
-            console.log('Processing pools...');
-            
+            const statsData = await statsResponse.json();
+
+            console.log(`Fetched ${poolsData?.data?.length || 0} CLMM pools`);
+            console.log('Sample CLMM pool:', poolsData?.data?.[0]);
+            console.log('Sample stats:', statsData?.data?.[0]);
+
             // Process pools and filter for high TVL
-            const mappedPools = poolsData
+            const mappedPools = (poolsData?.data || [])
                 .map(pool => {
-                    // Extract relevant data
-                    const liquidity = parseFloat(pool.liquidity || 0);
-                    const volume24h = parseFloat(pool.volume24h || 0);
+                    const stats = statsData?.data?.find(s => s.poolId === pool.id);
+                    if (!stats) return null;
+
+                    const volume24h = parseFloat(stats.volume24h || 0);
                     const fees24h = volume24h * 0.0025; // 0.25% fee
-                    const apr = parseFloat(pool.apr24h || 0);
+                    const liquidity = parseFloat(stats.tvl || 0);
 
                     return {
-                        id: pool.ammId,
+                        id: pool.id,
                         liquidity,
                         volume24h,
                         fees24h,
-                        apr,
-                        tokenA: pool.name?.split('/')[0] || 'Unknown',
-                        tokenB: pool.name?.split('/')[1] || 'Unknown',
-                        priceChange24h: pool.priceChange24h,
-                        mintA: pool.baseMint,
-                        mintB: pool.quoteMint
+                        tokenA: pool.tokenA || 'Unknown',
+                        tokenB: pool.tokenB || 'Unknown',
+                        priceChange24h: stats.priceChange24h,
+                        mintA: pool.mintA,
+                        mintB: pool.mintB,
+                        tickSpacing: pool.tickSpacing,
+                        feeTier: pool.ammConfig.tradeFeeRate / 10000 // Convert to percentage
                     };
                 })
-                .filter(pool => pool.liquidity > 0); // Filter out pools with no liquidity
+                .filter(pool => pool && pool.liquidity > 0);
 
-            console.log(`Found ${mappedPools.length} active pools`);
+            console.log(`Found ${mappedPools.length} active CLMM pools`);
 
             const highFeePools = mappedPools
-                .filter(pool => pool.fees24h >= 10000) // Only pools with $10k+ daily fees
+                .filter(pool => pool.fees24h >= 10000)
                 .sort((a, b) => b.fees24h - a.fees24h)
                 .slice(0, 10)
                 .map(pool => {
-                    console.log('Processing high-fee pool:', pool.id, 'Fees:', pool.fees24h.toFixed(2), 'TVL:', pool.liquidity.toFixed(2));
+                    console.log('Processing high-fee CLMM pool:', pool.id, 
+                        `\nFees: $${pool.fees24h.toFixed(2)}`, 
+                        `\nTVL: $${pool.liquidity.toFixed(2)}`,
+                        `\nFee Tier: ${pool.feeTier}%`
+                    );
                     
                     const metrics = {
                         liquidityUSD: pool.liquidity,
@@ -74,9 +86,10 @@ export class PoolAgent {
                         ilRisk: this.calculateILRisk(pool.priceChange24h),
                         activityScore: Math.min(100, (pool.volume24h / (pool.liquidity || 1)) * 100),
                         profitabilityScore: 0,
-                        apr: pool.apr,
+                        apr: (pool.fees24h * 365 * 100) / (pool.liquidity || 1),
                         tokenA: pool.tokenA,
-                        tokenB: pool.tokenB
+                        tokenB: pool.tokenB,
+                        feeTier: pool.feeTier
                     };
 
                     metrics.profitabilityScore = this.calculateProfitabilityScore(metrics);
@@ -93,12 +106,13 @@ export class PoolAgent {
 
             console.log(`Found ${highFeePools.length} high-fee CLMM pools`);
             if (highFeePools.length > 0) {
-                console.log('Top pool:', {
+                console.log('Top CLMM pool:', {
                     address: highFeePools[0].address,
                     tokens: `${highFeePools[0].metrics.tokenA}/${highFeePools[0].metrics.tokenB}`,
-                    fees24h: highFeePools[0].metrics.fees24h.toFixed(2),
-                    tvl: highFeePools[0].metrics.liquidityUSD.toFixed(2),
-                    apr: highFeePools[0].metrics.apr.toFixed(2) + '%'
+                    fees24h: `$${highFeePools[0].metrics.fees24h.toFixed(2)}`,
+                    tvl: `$${highFeePools[0].metrics.liquidityUSD.toFixed(2)}`,
+                    apr: `${highFeePools[0].metrics.apr.toFixed(2)}%`,
+                    feeTier: `${highFeePools[0].metrics.feeTier}%`
                 });
             }
             return highFeePools;

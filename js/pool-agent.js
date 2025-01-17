@@ -84,15 +84,20 @@ export class PoolAgent {
                     .slice(0, 10)
                     .map(apiData => {
                         const metrics = {
-                            liquidityUSD: apiData.liquidity,
-                            volume24h: apiData.volume24h,
-                            fees24h: apiData.volume24h * 0.0025,
-                            priceImpact: this.calculatePriceImpact(apiData.liquidity, 1000),
+                            liquidityUSD: apiData.liquidity || 0,
+                            volume24h: apiData.volume24h || 0,
+                            fees24h: (apiData.volume24h || 0) * 0.0025,
+                            priceImpact: this.calculatePriceImpact(apiData.liquidity || 0, 1000),
                             ilRisk: this.calculateILRisk(apiData.price24hChange),
-                            activityScore: Math.min(100, (apiData.volume24h / apiData.liquidity) * 100),
-                            tokenA: apiData.token0Symbol,
-                            tokenB: apiData.token1Symbol
+                            activityScore: Math.min(100, ((apiData.volume24h || 0) / (apiData.liquidity || 1)) * 100),
+                            profitabilityScore: 0, // Will be calculated below
+                            apr: ((apiData.volume24h || 0) * 0.0025 * 365 * 100) / (apiData.liquidity || 1),
+                            tokenA: apiData.token0Symbol || 'Unknown',
+                            tokenB: apiData.token1Symbol || 'Unknown'
                         };
+
+                        // Calculate profitability score
+                        metrics.profitabilityScore = this.calculateProfitabilityScore(metrics);
 
                         return {
                             address: apiData.ammId,

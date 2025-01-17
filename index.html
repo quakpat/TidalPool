@@ -167,37 +167,55 @@
             async findProfitablePools() {
                 try {
                     // Fetch Raydium CLMM pools data
+                    console.log('Fetching CLMM pools...');
                     const response = await fetch('https://api.raydium.io/v2/ammV3/ammPools');
                     const data = await response.json();
+                    console.log('Raw pool data:', data);
+
+                    if (!data.data || !Array.isArray(data.data)) {
+                        console.error('Unexpected data format:', data);
+                        return [];
+                    }
 
                     // Process and sort pools
-                    const processedPools = data.data.map(pool => ({
-                        address: pool.id,
-                        metrics: {
-                            tokenATicker: pool.token0Symbol,
-                            tokenBTicker: pool.token1Symbol,
-                            liquidityUSD: pool.tvl,
-                            volume24h: pool.volume24h,
-                            fees24h: pool.fee24h,
-                            apr: pool.apr24h,
-                            priceImpact: pool.priceImpact || 0,
-                            ilRisk: this.calculateILRisk(pool.price7d, pool.price24h),
-                            activityScore: this.calculateActivityScore(pool.volume24h, pool.tvl)
-                        },
-                        riskScore: this.calculateRiskScore(pool)
-                    }));
+                    const processedPools = data.data.map(pool => {
+                        console.log('Processing pool:', pool);
+                        return {
+                            address: pool.id,
+                            metrics: {
+                                tokenATicker: pool.token0Symbol,
+                                tokenBTicker: pool.token1Symbol,
+                                liquidityUSD: parseFloat(pool.tvl) || 0,
+                                volume24h: parseFloat(pool.volume24h) || 0,
+                                fees24h: parseFloat(pool.fee24h) || 0,
+                                apr: parseFloat(pool.apr24h) || 0,
+                                priceImpact: parseFloat(pool.priceImpact) || 0,
+                                ilRisk: this.calculateILRisk(pool.price7d, pool.price24h),
+                                activityScore: this.calculateActivityScore(pool.volume24h, pool.tvl)
+                            },
+                            riskScore: this.calculateRiskScore(pool)
+                        };
+                    });
 
-                    // Sort by a combination of APR and liquidity
-                    return processedPools
-                        .filter(pool => 
-                            pool.metrics.liquidityUSD > 10000 && // Min liquidity $10k
-                            pool.metrics.volume24h > 1000 // Min volume $1k
-                        )
+                    console.log('Processed pools:', processedPools);
+
+                    // Filter and sort pools
+                    const filteredPools = processedPools
+                        .filter(pool => {
+                            const meetsMinimums = 
+                                pool.metrics.liquidityUSD > 10000 && // Min liquidity $10k
+                                pool.metrics.volume24h > 1000; // Min volume $1k
+                            console.log(`Pool ${pool.address} meets minimums: ${meetsMinimums}`);
+                            return meetsMinimums;
+                        })
                         .sort((a, b) => 
                             (b.metrics.apr * Math.log10(b.metrics.liquidityUSD)) - 
                             (a.metrics.apr * Math.log10(a.metrics.liquidityUSD))
                         )
                         .slice(0, 10); // Top 10 pools
+
+                    console.log('Filtered pools:', filteredPools);
+                    return filteredPools;
                 } catch (error) {
                     console.error('Error in findProfitablePools:', error);
                     throw error;

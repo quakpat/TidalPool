@@ -245,7 +245,7 @@
                     const filteredPools = processedPools
                         .filter(pool => 
                             pool.metrics.liquidityUSD > 10000 && // Min liquidity $10k
-                            pool.metrics.volume24h > 1000 // Min volume $1k
+                            pool.metrics.volume24h > 1000 // Changed from 10000 to 1000
                         )
                         .sort((a, b) => 
                             (b.metrics.apr * Math.log10(b.metrics.liquidityUSD)) - 

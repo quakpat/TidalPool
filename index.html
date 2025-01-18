@@ -156,7 +156,7 @@
     </script>
     <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
     <script>
-        // Configuration object
+        // Configuration object - make sure this is your production API key
         const CONFIG = {
             HELIUS_API_KEY: 'b7b6ec9a-e258-4f73-ba77-429f2e0885f5'
         };
@@ -179,92 +179,64 @@
         class PoolAgent {
             constructor() {
                 this.connection = new solanaWeb3.Connection(
-                    'https://api.mainnet-beta.solana.com',
+                    'https://mainnet.helius-rpc.com/?api-key=' + CONFIG.HELIUS_API_KEY,
                     'confirmed'
                 );
             }
 
             async findProfitablePools() {
                 try {
-                    console.log('Fetching CLMM pools...');
                     const response = await fetch('https://api.raydium.io/v2/ammV3/ammPools');
                     const data = await response.json();
                     
-                    // Process pools
                     const processedPools = data.data
-                        .filter(pool => {
-                            console.log('Initial pool check:', {
-                                id: pool.id,
-                                tvl: pool.tvl,
-                                volume: pool.day?.volume,
-                                fee: pool.ammConfig?.tradeFeeRate
-                            });
-                            
-                            return pool.tvl > 0 && 
-                                   pool.day?.volume > 0 && 
-                                   pool.ammConfig?.tradeFeeRate &&
-                                   pool.mintA &&
-                                   pool.mintB;
-                        })
-                        .map(pool => {
-                            const mappedPool = {
-                                address: pool.id,
-                                metrics: {
-                                    tokenATicker: this.getTokenSymbol(pool.mintA),
-                                    tokenBTicker: this.getTokenSymbol(pool.mintB),
-                                    liquidityUSD: parseFloat(pool.tvl) || 0,
-                                    volume24h: parseFloat(pool.day.volume) || 0,
-                                    fees24h: parseFloat(pool.day.volumeFee) || 0,
-                                    apr: pool.day.feeApr || this.calculateApr(
-                                        pool.day.volume,
-                                        pool.tvl,
-                                        pool.ammConfig.tradeFeeRate
-                                    ),
-                                    priceImpact: 0,
-                                    ilRisk: this.calculateILRisk(
-                                        pool.week?.price,
-                                        pool.day?.price
-                                    ),
-                                    activityScore: this.calculateActivityScore(
-                                        parseFloat(pool.day.volume) || 0,
-                                        parseFloat(pool.tvl) || 0
-                                    )
-                                },
-                                riskScore: this.calculateRiskScore({
-                                    tvl: parseFloat(pool.tvl) || 0,
-                                    volume24h: parseFloat(pool.day.volume) || 0,
-                                    price: pool.price
-                                })
-                            };
-                            console.log('Mapped pool:', {
-                                address: mappedPool.address,
-                                volume24h: mappedPool.metrics.volume24h,
-                                liquidityUSD: mappedPool.metrics.liquidityUSD
-                            });
-                            return mappedPool;
-                        });
+                        .filter(pool => 
+                            pool.tvl > 0 && 
+                            pool.day?.volume > 0 && 
+                            pool.ammConfig?.tradeFeeRate &&
+                            pool.mintA &&
+                            pool.mintB
+                        )
+                        .map(pool => ({
+                            address: pool.id,
+                            metrics: {
+                                tokenATicker: this.getTokenSymbol(pool.mintA),
+                                tokenBTicker: this.getTokenSymbol(pool.mintB),
+                                liquidityUSD: parseFloat(pool.tvl) || 0,
+                                volume24h: parseFloat(pool.day.volume) || 0,
+                                fees24h: parseFloat(pool.day.volumeFee) || 0,
+                                apr: pool.day.feeApr || this.calculateApr(
+                                    pool.day.volume,
+                                    pool.tvl,
+                                    pool.ammConfig.tradeFeeRate
+                                ),
+                                priceImpact: 0,
+                                ilRisk: this.calculateILRisk(
+                                    pool.week?.price,
+                                    pool.day?.price
+                                ),
+                                activityScore: this.calculateActivityScore(
+                                    parseFloat(pool.day.volume) || 0,
+                                    parseFloat(pool.tvl) || 0
+                                )
+                            },
+                            riskScore: this.calculateRiskScore({
+                                tvl: parseFloat(pool.tvl) || 0,
+                                volume24h: parseFloat(pool.day.volume) || 0,
+                                price: pool.price
+                            })
+                        }));
 
-                    // Only filter by minimum liquidity, not by volume
                     const filteredPools = processedPools
-                        .filter(pool => {
-                            const meetsLiquidityRequirement = pool.metrics.liquidityUSD > 10000;
-                            console.log('Liquidity check for pool:', {
-                                address: pool.address,
-                                liquidity: pool.metrics.liquidityUSD,
-                                passes: meetsLiquidityRequirement
-                            });
-                            return meetsLiquidityRequirement;
-                        })
+                        .filter(pool => pool.metrics.liquidityUSD > 10000)
                         .sort((a, b) => 
                             (b.metrics.apr * Math.log10(b.metrics.liquidityUSD)) - 
                             (a.metrics.apr * Math.log10(a.metrics.liquidityUSD))
                         )
-                        .slice(0, 20); // Increased to show more pools
+                        .slice(0, 20);
 
-                    console.log('Final filtered pools before volume range filter:', filteredPools);
                     return filteredPools;
                 } catch (error) {
-                    console.error('Error in findProfitablePools:', error);
                     throw error;
                 }
             }
@@ -461,16 +433,8 @@
                 const pools = await poolAgent.findProfitablePools();
                 const feeFilterValue = document.getElementById('volumeFilter').value;
                 
-                console.log('Applying fee filter:', feeFilterValue);
-                console.log('Available pools before fee filter:', pools.length);
-                
                 const filteredPools = pools.filter(pool => {
                     const fees = pool.metrics.fees24h;
-                    console.log('Checking fees for pool:', {
-                        address: pool.address,
-                        fees: fees,
-                        filterValue: feeFilterValue
-                    });
                     
                     if (feeFilterValue === '1000-4999') {
                         return fees >= 1000 && fees < 5000;
@@ -482,8 +446,6 @@
                     return false;
                 });
                 
-                console.log('Pools after fee filter:', filteredPools.length);
-                
                 const poolResultsDiv = document.getElementById('pool-results');
                 if (filteredPools && filteredPools.length > 0) {
                     poolResultsDiv.innerHTML = filteredPools.map(formatPoolData).join('');
@@ -491,7 +453,6 @@
                     poolResultsDiv.innerHTML = '<p class="text-white">No pools found in the selected fee range.</p>';
                 }
             } catch (error) {
-                console.error('Error loading pools:', error);
                 document.getElementById('pool-results').innerHTML = 
                     '<p class="text-red-500">Error loading pools. Please try again later.</p>';
             }

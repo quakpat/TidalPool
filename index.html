@@ -155,22 +155,11 @@
         window.raydiumSdk = window.RadiumSDK;
     </script>
     <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/dotenv@16.3.1/lib/main.min.js"></script>
     <script>
-        // Load environment variables
-        window.env = {};
-        fetch('/.env')
-            .then(response => response.text())
-            .then(data => {
-                const vars = data.split('\n');
-                vars.forEach(variable => {
-                    const [key, value] = variable.split('=');
-                    if (key && value) {
-                        window.env[key.trim()] = value.trim();
-                    }
-                });
-            })
-            .catch(error => console.error('Error loading .env file:', error));
+        // Configuration object
+        const CONFIG = {
+            HELIUS_API_KEY: 'b7b6ec9a-e258-4f73-ba77-429f2e0885f5'
+        };
     </script>
     <script>
         // Polyfill for crypto
@@ -342,8 +331,8 @@
             try {
                 console.log('Checking token holdings for address:', publicKey.toString());
                 
-                // Use Helius RPC endpoint
-                const RPC_ENDPOINT = 'https://mainnet.helius-rpc.com/?api-key=' + window.env.HELIUS_API_KEY;
+                // Use Helius RPC endpoint with the API key from CONFIG
+                const RPC_ENDPOINT = 'https://mainnet.helius-rpc.com/?api-key=' + CONFIG.HELIUS_API_KEY;
 
                 // Get all token accounts owned by this wallet
                 const response = await fetch(

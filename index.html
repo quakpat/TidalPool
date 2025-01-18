@@ -211,51 +211,42 @@
                                    pool.mintA &&
                                    pool.mintB;
                         })
-                        .map(pool => {
-                            console.log('Processing qualified pool:', pool);
-                            const apr = this.calculateApr(
-                                pool.day.volume,
-                                pool.tvl,
-                                pool.ammConfig.tradeFeeRate
-                            );
-                            return {
-                                address: pool.id,
-                                metrics: {
-                                    tokenATicker: this.getTokenSymbol(pool.mintA),
-                                    tokenBTicker: this.getTokenSymbol(pool.mintB),
-                                    liquidityUSD: parseFloat(pool.tvl) || 0,
-                                    volume24h: parseFloat(pool.day.volume) || 0,
-                                    fees24h: parseFloat(pool.day.volumeFee) || 0,
-                                    apr: pool.day.feeApr || apr,
-                                    priceImpact: 0,
-                                    ilRisk: this.calculateILRisk(
-                                        pool.week?.price,
-                                        pool.day?.price
-                                    ),
-                                    activityScore: this.calculateActivityScore(
-                                        parseFloat(pool.day.volume) || 0,
-                                        parseFloat(pool.tvl) || 0
-                                    )
-                                },
-                                riskScore: this.calculateRiskScore({
-                                    tvl: parseFloat(pool.tvl) || 0,
-                                    volume24h: parseFloat(pool.day.volume) || 0,
-                                    price: pool.price
-                                })
-                            };
-                        });
-
-                    console.log('Processed pools:', processedPools);
+                        .map(pool => ({
+                            address: pool.id,
+                            metrics: {
+                                tokenATicker: this.getTokenSymbol(pool.mintA),
+                                tokenBTicker: this.getTokenSymbol(pool.mintB),
+                                liquidityUSD: parseFloat(pool.tvl) || 0,
+                                volume24h: parseFloat(pool.day.volume) || 0,
+                                fees24h: parseFloat(pool.day.volumeFee) || 0,
+                                apr: pool.day.feeApr || this.calculateApr(
+                                    pool.day.volume,
+                                    pool.tvl,
+                                    pool.ammConfig.tradeFeeRate
+                                ),
+                                priceImpact: 0,
+                                ilRisk: this.calculateILRisk(
+                                    pool.week?.price,
+                                    pool.day?.price
+                                ),
+                                activityScore: this.calculateActivityScore(
+                                    parseFloat(pool.day.volume) || 0,
+                                    parseFloat(pool.tvl) || 0
+                                )
+                            },
+                            riskScore: this.calculateRiskScore({
+                                tvl: parseFloat(pool.tvl) || 0,
+                                volume24h: parseFloat(pool.day.volume) || 0,
+                                price: pool.price
+                            })
+                        }));
 
                     // Filter and sort pools
                     const filteredPools = processedPools
-                        .filter(pool => {
-                            const meetsMinimums = 
-                                pool.metrics.liquidityUSD > 10000 && // Min liquidity $10k
-                                pool.metrics.volume24h > 1000; // Min volume $1k
-                            console.log(`Pool ${pool.address} meets minimums: ${meetsMinimums}`);
-                            return meetsMinimums;
-                        })
+                        .filter(pool => 
+                            pool.metrics.liquidityUSD > 10000 && // Min liquidity $10k
+                            pool.metrics.volume24h > 1000 // Min volume $1k
+                        )
                         .sort((a, b) => 
                             (b.metrics.apr * Math.log10(b.metrics.liquidityUSD)) - 
                             (a.metrics.apr * Math.log10(a.metrics.liquidityUSD))
@@ -438,6 +429,18 @@
                         <div>TVL: $${pool.metrics.liquidityUSD.toLocaleString()}</div>
                         <div>24h Volume: $${pool.metrics.volume24h.toLocaleString()}</div>
                         <div>Risk Score: ${pool.riskScore}/10</div>
+                    </div>
+                    <div class="mt-3 flex space-x-3 text-sm">
+                        <a href="https://raydium.io/clmm/pools/${pool.address}" 
+                           target="_blank" 
+                           class="text-[#0a88cf] hover:text-opacity-80 transition">
+                            View Pool ↗
+                        </a>
+                        <a href="https://solscan.io/account/${pool.address}" 
+                           target="_blank" 
+                           class="text-[#0a88cf] hover:text-opacity-80 transition">
+                            View on Solscan ↗
+                        </a>
                     </div>
                 </div>
             `;

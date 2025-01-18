@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="$TP - TidalPool, Shaping the Future of Solana Liquidity">
-    <title>$TP - Tidal Pool</title>
+    <title>$TP - TidalPool</title>
     
     <!-- Tailwind CSS via CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -156,6 +156,19 @@
     </script>
     <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dotenv@16.3.1/lib/main.min.js"></script>
+    <script>
+        // Polyfill for crypto
+        if (typeof window.crypto === 'undefined') {
+            window.crypto = {
+                getRandomValues: function(buffer) {
+                    for (let i = 0; i < buffer.length; i++) {
+                        buffer[i] = Math.floor(Math.random() * 256);
+                    }
+                    return buffer;
+                }
+            };
+        }
+    </script>
     <script>
         // Define PoolAgent class first
         class PoolAgent {
@@ -313,28 +326,32 @@
             try {
                 console.log('Checking token holdings for address:', publicKey.toString());
                 
-                // Use the same public RPC endpoint
                 const connection = new solanaWeb3.Connection(
                     'https://api.mainnet-beta.solana.com',
                     'confirmed'
                 );
                 
-                const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
+                // Use getTokenAccountsByOwner instead of getParsedTokenAccountsByOwner
+                const tokenAccounts = await connection.getTokenAccountsByOwner(
                     publicKey,
-                    { programId: new solanaWeb3.PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA') }
+                    {
+                        mint: new solanaWeb3.PublicKey(TIDAL_POOL_TOKEN)
+                    }
                 );
 
                 console.log('Found token accounts:', tokenAccounts);
 
-                const tidalPoolAccount = tokenAccounts.value.find(account => 
-                    account.account.data.parsed.info.mint === TIDAL_POOL_TOKEN
-                );
-
-                if (tidalPoolAccount) {
-                    const balance = tidalPoolAccount.account.data.parsed.info.tokenAmount.uiAmount;
+                // If any accounts are found, the user holds the token
+                if (tokenAccounts.value.length > 0) {
+                    // Get the balance of the first account
+                    const accountInfo = await connection.getTokenAccountBalance(
+                        tokenAccounts.value[0].pubkey
+                    );
+                    const balance = accountInfo.value.uiAmount;
                     console.log('Tidal Pool balance:', balance);
                     return balance > 0;
                 }
+
                 console.log('No Tidal Pool token account found');
                 return false;
             } catch (error) {

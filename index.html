@@ -426,7 +426,24 @@
             }
         }
 
-        // Add event listeners after all definitions
+        // Add this function to format pool data
+        function formatPoolData(pool) {
+            return `
+                <div class="bg-[#192125] rounded-lg p-4 mb-4">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="font-semibold">${pool.metrics.tokenATicker} / ${pool.metrics.tokenBTicker}</span>
+                        <span class="text-[#0a88cf]">APR: ${pool.metrics.apr.toFixed(2)}%</span>
+                    </div>
+                    <div class="text-sm text-gray-300">
+                        <div>TVL: $${pool.metrics.liquidityUSD.toLocaleString()}</div>
+                        <div>24h Volume: $${pool.metrics.volume24h.toLocaleString()}</div>
+                        <div>Risk Score: ${pool.riskScore}/10</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Update the wallet connection success handler to load pools
         window.addEventListener('DOMContentLoaded', () => {
             document.getElementById('connectForAgent').addEventListener('click', async () => {
                 try {
@@ -444,11 +461,28 @@
                     document.getElementById('walletStatus').textContent = 
                         `Connected: ${resp.publicKey.toString().slice(0, 4)}...${resp.publicKey.toString().slice(-4)}`;
                     
-                    // Create pool agent instance
+                    // Create pool agent instance and load pools
                     const poolAgent = new PoolAgent();
                     
                     // Check token holding and update UI
                     await updateAgentVisibility();
+
+                    // If user has tokens, load and display pools
+                    if (await checkTokenHolding(walletPublicKey)) {
+                        try {
+                            const pools = await poolAgent.findProfitablePools();
+                            const poolResultsDiv = document.getElementById('pool-results');
+                            if (pools && pools.length > 0) {
+                                poolResultsDiv.innerHTML = pools.map(formatPoolData).join('');
+                            } else {
+                                poolResultsDiv.innerHTML = '<p class="text-white">No profitable pools found.</p>';
+                            }
+                        } catch (error) {
+                            console.error('Error loading pools:', error);
+                            document.getElementById('pool-results').innerHTML = 
+                                '<p class="text-red-500">Error loading pools. Please try again later.</p>';
+                        }
+                    }
                 } catch (err) {
                     console.error('Wallet connection error:', err);
                     document.getElementById('walletStatus').textContent = 'Connection failed';
@@ -563,7 +597,7 @@
                                 This Agent identifies the most profitable Solana Liquidity Pools on Raydium.
                             </p>
                             <div class="bg-[#243038] rounded-xl p-6">
-                                <div id="pool-results">
+                                <div id="pool-results" class="space-y-4">
                                     <!-- Results will be populated here -->
                                     <p class="text-white">Loading pools...</p>
                                 </div>

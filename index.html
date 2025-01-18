@@ -446,7 +446,30 @@
             `;
         }
 
-        // Update the wallet connection success handler to load pools
+        // Add these functions for filtering and refreshing pools
+        async function loadAndDisplayPools(poolAgent) {
+            try {
+                const pools = await poolAgent.findProfitablePools();
+                const volumeFilter = parseInt(document.getElementById('volumeFilter').value);
+                
+                const filteredPools = pools.filter(pool => 
+                    pool.metrics.volume24h >= volumeFilter
+                );
+                
+                const poolResultsDiv = document.getElementById('pool-results');
+                if (filteredPools && filteredPools.length > 0) {
+                    poolResultsDiv.innerHTML = filteredPools.map(formatPoolData).join('');
+                } else {
+                    poolResultsDiv.innerHTML = '<p class="text-white">No pools found matching the criteria.</p>';
+                }
+            } catch (error) {
+                console.error('Error loading pools:', error);
+                document.getElementById('pool-results').innerHTML = 
+                    '<p class="text-red-500">Error loading pools. Please try again later.</p>';
+            }
+        }
+
+        // Update the wallet connection success handler
         window.addEventListener('DOMContentLoaded', () => {
             document.getElementById('connectForAgent').addEventListener('click', async () => {
                 try {
@@ -464,7 +487,7 @@
                     document.getElementById('walletStatus').textContent = 
                         `Connected: ${resp.publicKey.toString().slice(0, 4)}...${resp.publicKey.toString().slice(-4)}`;
                     
-                    // Create pool agent instance and load pools
+                    // Create pool agent instance
                     const poolAgent = new PoolAgent();
                     
                     // Check token holding and update UI
@@ -472,19 +495,12 @@
 
                     // If user has tokens, load and display pools
                     if (await checkTokenHolding(walletPublicKey)) {
-                        try {
-                            const pools = await poolAgent.findProfitablePools();
-                            const poolResultsDiv = document.getElementById('pool-results');
-                            if (pools && pools.length > 0) {
-                                poolResultsDiv.innerHTML = pools.map(formatPoolData).join('');
-                            } else {
-                                poolResultsDiv.innerHTML = '<p class="text-white">No profitable pools found.</p>';
-                            }
-                        } catch (error) {
-                            console.error('Error loading pools:', error);
-                            document.getElementById('pool-results').innerHTML = 
-                                '<p class="text-red-500">Error loading pools. Please try again later.</p>';
-                        }
+                        // Add event listeners for filter and refresh
+                        document.getElementById('volumeFilter').addEventListener('change', () => loadAndDisplayPools(poolAgent));
+                        document.getElementById('refreshPools').addEventListener('click', () => loadAndDisplayPools(poolAgent));
+                        
+                        // Initial load
+                        await loadAndDisplayPools(poolAgent);
                     }
                 } catch (err) {
                     console.error('Wallet connection error:', err);
@@ -599,6 +615,23 @@
                             <p class="text-lg leading-relaxed mb-6">
                                 This Agent identifies the most profitable Solana Liquidity Pools on Raydium.
                             </p>
+                            <!-- Add filter controls -->
+                            <div class="flex items-center gap-4 mb-4">
+                                <div class="flex items-center">
+                                    <label for="volumeFilter" class="text-white mr-2">24h Volume:</label>
+                                    <select id="volumeFilter" class="bg-[#243038] text-white px-3 py-2 rounded-lg border border-[#0a88cf] focus:outline-none focus:ring-2 focus:ring-[#0a88cf]">
+                                        <option value="1000">>&nbsp;$1,000</option>
+                                        <option value="5000">>&nbsp;$5,000</option>
+                                        <option value="10000">>&nbsp;$10,000</option>
+                                    </select>
+                                </div>
+                                <button id="refreshPools" class="bg-[#0a88cf] text-white px-4 py-2 rounded-lg hover:bg-opacity-80 transition flex items-center">
+                                    <svg class="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M4 4V9H4.58152M19.9381 11C19.446 7.05369 16.0796 4 12 4C8.64262 4 5.76829 6.06817 4.58152 9M4.58152 9H9M20 20V15H19.4185M19.4185 15C18.2317 17.9318 15.3574 20 12 20C7.92038 20 4.55399 16.9463 4.06189 13M19.4185 15H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                    Refresh
+                                </button>
+                            </div>
                             <div class="bg-[#243038] rounded-xl p-6">
                                 <div id="pool-results" class="space-y-4">
                                     <!-- Results will be populated here -->

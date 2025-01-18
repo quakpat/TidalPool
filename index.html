@@ -186,23 +186,18 @@
 
             async findProfitablePools() {
                 try {
-                    // Fetch Raydium CLMM pools data
                     console.log('Fetching CLMM pools...');
                     const response = await fetch('https://api.raydium.io/v2/ammV3/ammPools');
                     const data = await response.json();
-                    console.log('Raw pool data:', data);
-
-                    // Process and sort pools
+                    
+                    // Process pools
                     const processedPools = data.data
                         .filter(pool => {
-                            // Log pool data for debugging
-                            console.log('Checking pool:', {
+                            console.log('Initial pool check:', {
                                 id: pool.id,
                                 tvl: pool.tvl,
                                 volume: pool.day?.volume,
-                                fee: pool.ammConfig?.tradeFeeRate,
-                                mintA: pool.mintA,
-                                mintB: pool.mintB
+                                fee: pool.ammConfig?.tradeFeeRate
                             });
                             
                             return pool.tvl > 0 && 
@@ -211,49 +206,62 @@
                                    pool.mintA &&
                                    pool.mintB;
                         })
-                        .map(pool => ({
-                            address: pool.id,
-                            metrics: {
-                                tokenATicker: this.getTokenSymbol(pool.mintA),
-                                tokenBTicker: this.getTokenSymbol(pool.mintB),
-                                liquidityUSD: parseFloat(pool.tvl) || 0,
-                                volume24h: parseFloat(pool.day.volume) || 0,
-                                fees24h: parseFloat(pool.day.volumeFee) || 0,
-                                apr: pool.day.feeApr || this.calculateApr(
-                                    pool.day.volume,
-                                    pool.tvl,
-                                    pool.ammConfig.tradeFeeRate
-                                ),
-                                priceImpact: 0,
-                                ilRisk: this.calculateILRisk(
-                                    pool.week?.price,
-                                    pool.day?.price
-                                ),
-                                activityScore: this.calculateActivityScore(
-                                    parseFloat(pool.day.volume) || 0,
-                                    parseFloat(pool.tvl) || 0
-                                )
-                            },
-                            riskScore: this.calculateRiskScore({
-                                tvl: parseFloat(pool.tvl) || 0,
-                                volume24h: parseFloat(pool.day.volume) || 0,
-                                price: pool.price
-                            })
-                        }));
+                        .map(pool => {
+                            const mappedPool = {
+                                address: pool.id,
+                                metrics: {
+                                    tokenATicker: this.getTokenSymbol(pool.mintA),
+                                    tokenBTicker: this.getTokenSymbol(pool.mintB),
+                                    liquidityUSD: parseFloat(pool.tvl) || 0,
+                                    volume24h: parseFloat(pool.day.volume) || 0,
+                                    fees24h: parseFloat(pool.day.volumeFee) || 0,
+                                    apr: pool.day.feeApr || this.calculateApr(
+                                        pool.day.volume,
+                                        pool.tvl,
+                                        pool.ammConfig.tradeFeeRate
+                                    ),
+                                    priceImpact: 0,
+                                    ilRisk: this.calculateILRisk(
+                                        pool.week?.price,
+                                        pool.day?.price
+                                    ),
+                                    activityScore: this.calculateActivityScore(
+                                        parseFloat(pool.day.volume) || 0,
+                                        parseFloat(pool.tvl) || 0
+                                    )
+                                },
+                                riskScore: this.calculateRiskScore({
+                                    tvl: parseFloat(pool.tvl) || 0,
+                                    volume24h: parseFloat(pool.day.volume) || 0,
+                                    price: pool.price
+                                })
+                            };
+                            console.log('Mapped pool:', {
+                                address: mappedPool.address,
+                                volume24h: mappedPool.metrics.volume24h,
+                                liquidityUSD: mappedPool.metrics.liquidityUSD
+                            });
+                            return mappedPool;
+                        });
 
-                    // Filter and sort pools
+                    // Only filter by minimum liquidity, not by volume
                     const filteredPools = processedPools
-                        .filter(pool => 
-                            pool.metrics.liquidityUSD > 10000 && // Min liquidity $10k
-                            pool.metrics.volume24h > 1000 // Changed from 10000 to 1000
-                        )
+                        .filter(pool => {
+                            const meetsLiquidityRequirement = pool.metrics.liquidityUSD > 10000;
+                            console.log('Liquidity check for pool:', {
+                                address: pool.address,
+                                liquidity: pool.metrics.liquidityUSD,
+                                passes: meetsLiquidityRequirement
+                            });
+                            return meetsLiquidityRequirement;
+                        })
                         .sort((a, b) => 
                             (b.metrics.apr * Math.log10(b.metrics.liquidityUSD)) - 
                             (a.metrics.apr * Math.log10(a.metrics.liquidityUSD))
                         )
-                        .slice(0, 10); // Top 10 pools
+                        .slice(0, 20); // Increased to show more pools
 
-                    console.log('Filtered pools:', filteredPools);
+                    console.log('Final filtered pools before volume range filter:', filteredPools);
                     return filteredPools;
                 } catch (error) {
                     console.error('Error in findProfitablePools:', error);
@@ -452,8 +460,16 @@
                 const pools = await poolAgent.findProfitablePools();
                 const volumeFilterValue = document.getElementById('volumeFilter').value;
                 
+                console.log('Applying volume filter:', volumeFilterValue);
+                console.log('Available pools before volume filter:', pools.length);
+                
                 const filteredPools = pools.filter(pool => {
                     const volume = pool.metrics.volume24h;
+                    console.log('Checking volume for pool:', {
+                        address: pool.address,
+                        volume: volume,
+                        filterValue: volumeFilterValue
+                    });
                     
                     if (volumeFilterValue === '1000-4999') {
                         return volume >= 1000 && volume < 5000;
@@ -464,6 +480,8 @@
                     }
                     return false;
                 });
+                
+                console.log('Pools after volume filter:', filteredPools.length);
                 
                 const poolResultsDiv = document.getElementById('pool-results');
                 if (filteredPools && filteredPools.length > 0) {

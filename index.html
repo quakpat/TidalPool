@@ -330,25 +330,60 @@
                     'https://api.mainnet-beta.solana.com',
                     'confirmed'
                 );
-                
-                // Use getTokenAccountsByOwner instead of getParsedTokenAccountsByOwner
-                const tokenAccounts = await connection.getTokenAccountsByOwner(
-                    publicKey,
+
+                // Get all token accounts owned by this wallet
+                const response = await fetch(
+                    `https://api.mainnet-beta.solana.com`,
                     {
-                        mint: new solanaWeb3.PublicKey(TIDAL_POOL_TOKEN)
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            "jsonrpc": "2.0",
+                            "id": 1,
+                            "method": "getTokenAccountsByOwner",
+                            "params": [
+                                publicKey.toString(),
+                                {
+                                    "mint": TIDAL_POOL_TOKEN
+                                },
+                                {
+                                    "encoding": "jsonParsed"
+                                }
+                            ]
+                        })
                     }
                 );
 
-                console.log('Found token accounts:', tokenAccounts);
+                const data = await response.json();
+                console.log('Token accounts data:', data);
 
-                // If any accounts are found, the user holds the token
-                if (tokenAccounts.value.length > 0) {
-                    // Get the balance of the first account
-                    const accountInfo = await connection.getTokenAccountBalance(
-                        tokenAccounts.value[0].pubkey
+                if (data.result && data.result.value && data.result.value.length > 0) {
+                    // Found at least one token account for this mint
+                    const tokenAccount = data.result.value[0];
+                    // Get the balance
+                    const balanceResponse = await fetch(
+                        `https://api.mainnet-beta.solana.com`,
+                        {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                "jsonrpc": "2.0",
+                                "id": 1,
+                                "method": "getTokenAccountBalance",
+                                "params": [
+                                    tokenAccount.pubkey
+                                ]
+                            })
+                        }
                     );
-                    const balance = accountInfo.value.uiAmount;
-                    console.log('Tidal Pool balance:', balance);
+
+                    const balanceData = await balanceResponse.json();
+                    const balance = balanceData.result?.value?.uiAmount || 0;
+                    console.log('Token balance:', balance);
                     return balance > 0;
                 }
 

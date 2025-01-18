@@ -373,7 +373,7 @@
 
         // Add event listeners after all definitions
         window.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('connectWallet').addEventListener('click', async () => {
+            document.getElementById('connectForAgent').addEventListener('click', async () => {
                 try {
                     if (!window.phantom?.solana?.isPhantom) {
                         alert('Please install Phantom wallet!');
@@ -399,12 +399,6 @@
                     document.getElementById('walletStatus').textContent = 'Connection failed';
                     walletConnected = false;
                     walletPublicKey = null;
-                }
-            });
-
-            document.getElementById('connectForAgent').addEventListener('click', async () => {
-                if (!walletConnected) {
-                    document.getElementById('connectWallet').click();
                 }
             });
 
@@ -542,6 +536,7 @@
                 <div id="agent-connect-prompt" class="text-center py-8">
                     <p class="text-lg mb-4">Please connect your wallet and hold $TP tokens to access the Tidal Pool Agent</p>
                     <button id="connectForAgent" class="connect-wallet-button">Connect Wallet</button>
+                    <div id="walletStatus" class="mt-2 text-sm text-gray-400"></div>
                 </div>
             </div>
         </section>
@@ -684,11 +679,5 @@
             </div>
         </div>
     </footer>
-
-    <!-- Add this near the top of your body tag -->
-    <div class="wallet-container">
-        <button id="connectWallet" class="wallet-button">Connect Phantom Wallet</button>
-        <div id="walletStatus" class="wallet-status"></div>
-    </div>
 </body>
 </html>

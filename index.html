@@ -326,14 +326,12 @@
             try {
                 console.log('Checking token holdings for address:', publicKey.toString());
                 
-                const connection = new solanaWeb3.Connection(
-                    'https://api.mainnet-beta.solana.com',
-                    'confirmed'
-                );
+                // Use GenesysGo's public RPC endpoint
+                const RPC_ENDPOINT = 'https://ssc-dao.genesysgo.net';
 
                 // Get all token accounts owned by this wallet
                 const response = await fetch(
-                    `https://api.mainnet-beta.solana.com`,
+                    RPC_ENDPOINT,
                     {
                         method: 'POST',
                         headers: {
@@ -364,7 +362,7 @@
                     const tokenAccount = data.result.value[0];
                     // Get the balance
                     const balanceResponse = await fetch(
-                        `https://api.mainnet-beta.solana.com`,
+                        RPC_ENDPOINT,
                         {
                             method: 'POST',
                             headers: {

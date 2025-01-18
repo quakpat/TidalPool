@@ -157,6 +157,22 @@
     <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dotenv@16.3.1/lib/main.min.js"></script>
     <script>
+        // Load environment variables
+        window.env = {};
+        fetch('/.env')
+            .then(response => response.text())
+            .then(data => {
+                const vars = data.split('\n');
+                vars.forEach(variable => {
+                    const [key, value] = variable.split('=');
+                    if (key && value) {
+                        window.env[key.trim()] = value.trim();
+                    }
+                });
+            })
+            .catch(error => console.error('Error loading .env file:', error));
+    </script>
+    <script>
         // Polyfill for crypto
         if (typeof window.crypto === 'undefined') {
             window.crypto = {
@@ -326,8 +342,8 @@
             try {
                 console.log('Checking token holdings for address:', publicKey.toString());
                 
-                // Use GenesysGo's public RPC endpoint
-                const RPC_ENDPOINT = 'https://ssc-dao.genesysgo.net';
+                // Use Helius RPC endpoint
+                const RPC_ENDPOINT = 'https://mainnet.helius-rpc.com/?api-key=' + window.env.HELIUS_API_KEY;
 
                 // Get all token accounts owned by this wallet
                 const response = await fetch(
